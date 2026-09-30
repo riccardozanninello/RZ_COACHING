@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+<title>RZ COACHING</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #080808;
+    color: #ffffff;
+    min-height: 100vh;
+}
+
+:root {
+    --green: #39ff6a;
+    --green-dark: #16a844;
+    --card: #151515;
+    --card2: #1d1d1d;
+    --gray: #969696;
+}
+
+/* HEADER */
+
+.header {
+    padding: 28px 20px 18px;
+    background: #0b0b0b;
+    border-bottom: 1px solid #202020;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.logo {
+    color: var(--green);
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: 1px;
+}
+
+.subtitle {
+    color: var(--gray);
+    margin-top: 5px;
+    font-size: 13px;
+}
+
+/* CONTENT */
+
+.content {
+    padding: 22px 18px 100px;
+    max-width: 700px;
+    margin: auto;
+}
+
+.page {
+    display: none;
+}
+
+.page.active {
+    display: block;
+}
+
+h1 {
+    font-size: 28px;
+    margin-bottom: 8px;
+}
+
+h2 {
+    font-size: 20px;
+    margin-bottom: 14px;
+}
+
+.section-title {
+    margin-top: 25px;
+    margin-bottom: 12px;
+    font-size: 18px;
+}
+
+/* WELCOME */
+
+.welcome {
+    background: linear-gradient(145deg, #142319, #101010);
+    border: 1px solid #245d35;
+    border-radius: 20px;
+    padding: 22px;
+    margin-bottom: 20px;
+}
+
+.welcome span {
+    color: var(--green);
+}
+
+/* CARDS */
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.card {
+    background: var(--card);
+    border: 1px solid #262626;
+    border-radius: 17px;
+    padding: 18px;
+    min-height: 120px;
+}
+
+.card-icon {
+    font-size: 28px;
+    margin-bottom: 12px;
+}
+
+.card-title {
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.card-text {
+    color: var(--gray);
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.card-green {
+    border-color: #237b3b;
+}
+
+/* BUTTON */
+
+.btn {
+    border: none;
+    background: var(--green);
+    color: #000;
+    font-weight: 800;
+    padding: 13px 18px;
+    border-radius: 12px;
+    margin-top: 15px;
+    cursor: pointer;
+}
+
+.btn-dark {
+    background: #252525;
+    color: white;
+}
+
+/* LIST */
+
+.list-item {
+    background: var(--card);
+    border: 1px solid #272727;
+    border-radius: 15px;
+    padding: 16px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.list-icon {
+    font-size: 25px;
+}
+
+.list-info {
+    flex: 1;
+}
+
+.list-info strong {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.list-info small {
+    color: var(--gray);
+}
+
+/* PROGRESS */
+
+.progress-box {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 18px;
+    margin-top: 15px;
+}
+
+.progress {
+    height: 9px;
+    background: #292929;
+    border-radius: 20px;
+    overflow: hidden;
+    margin-top: 10px;
+}
+
+.progress-bar {
+    height: 100%;
+    background: var(--green);
+    width: 70%;
+}
+
+/* FORM */
+
+input, textarea, select {
+    width: 100%;
+    background: #181818;
+    color: white;
+    border: 1px solid #303030;
+    border-radius: 12px;
+    padding: 14px;
+    margin: 7px 0 14px;
+    font-size: 15px;
+}
+
+label {
+    color: #aaa;
+    font-size: 13px;
+}
+
+/* BOTTOM NAV */
+
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 75px;
+    background: #101010;
+    border-top: 1px solid #252525;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 20;
+}
+
+.nav-btn {
+    background: transparent;
+    border: none;
+    color: #777;
+    font-size: 11px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.nav-btn .icon {
+    font-size: 22px;
+}
+
+.nav-btn.active {
+    color: var(--green);
+}
+
+/* BADGE */
+
+.badge {
+    display: inline-block;
+    color: #000;
+    background: var(--green);
+    border-radius: 20px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+/* DESKTOP */
+
+@media (min-width: 700px) {
+    .bottom-nav {
+        left: 50%;
+        transform: translateX(-50%);
+        width: 650px;
+        border-radius: 20px 20px 0 0;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header class="header">
+    <div class="logo">RZ COACHING</div>
+    <div class="subtitle">Personal Fitness Coaching</div>
+</header>
+
+<main class="content">
+
+<!-- HOME -->
+
+<section id="home" class="page active">
+
+    <div class="welcome">
+                <span>Benvenuto in RZ COACHING</span>
+
+        <h1>Il tuo percorso.</h1>
+
+        <p class="card-text">
+            Allenamento, alimentazione, monitoraggio e supporto
+            tutto in un'unica app.
+        </p>
+
+        <button class="btn" onclick="showPage('workout')">
+            Inizia allenamento
+        </button>
+    </div>
+
+    <h2>Il tuo percorso</h2>
+
+    <div class="grid">
+
+        <div class="card card-green" onclick="showPage('workout')">
+            <div class="card-icon">🏋️</div>
+            <div class="card-title">Allenamento</div>
+            <div class="card-text">
+                Schede, esercizi e progressi.
+            </div>
+        </div>
+
+        <div class="card" onclick="showPage('protocol')">
+            <div class="card-icon">📋</div>
+            <div class="card-title">Protocollo</div>
+            <div class="card-text">
+                Il tuo programma personalizzato.
+            </div>
+        </div>
+
+        <div class="card" onclick="showPage('integration')">
+            <div class="card-icon">💊</div>
+            <div class="card-title">Integrazione</div>
+            <div class="card-text">
+                Gestisci la tua integrazione.
+            </div>
+        </div>
+
+        <div class="card" onclick="showPage('monitoring')">
+            <div class="card-icon">📊</div>
+            <div class="card-title">Monitoraggio</div>
+            <div class="card-text">
+                Controlla peso, sonno, energia e progressi.
+            </div>
+        </div>
+
+    </div>
+
+    <div class="section-title">Oggi</div>
+
+    <div class="list-item">
+        <div class="list-icon">🔥</div>
+        <div class="list-info">
+            <strong>Allenamento di oggi</strong>
+            <small>Programma assegnato dal Coach</small>
+        </div>
+        <span class="badge">DA FARE</span>
+    </div>
+
+    <div class="list-item">
+        <div class="list-icon">📊</div>
+        <div class="list-info">
+            <strong>Monitoraggio</strong>
+            <small>Compila il check giornaliero</small>
+        </div>
+        <span class="badge">CHECK</span>
+    </div>
+
+</section>
+
+
+<!-- ALLENAMENTO -->
+
+<section id="workout" class="page">
+
+    <h1>Allenamento</h1>
+    <p class="card-text">Il tuo programma di oggi.</p>
+
+    <div class="section-title">Scheda</div>
+
+    <div class="list-item">
+        <div class="list-icon">🏋️</div>
+        <div class="list-info">
+            <strong>Petto & Tricipiti</strong>
+            <small>6 esercizi • 60 min</small>
+        </div>
+    </div>
+
+    <div class="list-item">
+        <div class="list-icon">💪</div>
+        <div class="list-info">
+            <strong>Panca piana</strong>
+            <small>4 serie × 8-10 ripetizioni</small>
+        </div>
+    </div>
+
+    <div class="list-item">
+        <div class="list-icon">💪</div>
+        <div class="list-info">
+            <strong>Panca inclinata</strong>
+            <small>3 serie × 10-12 ripetizioni</small>
+        </div>
+    </div>
+
+    <div class="list-item">
+        <div class="list-icon">💪</div>
+        <div class="list-info">
+            <strong>Push Down</strong>
+            <small>3 serie × 12-15 ripetizioni</small>
+        </div>
+    </div>
+
+    <button class="btn" onclick="alert('Allenamento completato!')">
+        ✓ Completa allenamento
+    </button>
+
+</section>
+
+
+<!-- PROTOCOLLO -->
+
+<section id="protocol" class="page">
+
+    <h1>Protocollo</h1>
+    <p class="card-text">
+        Il tuo protocollo personalizzato.
+    </p>
+
+    <div class="progress-box">
+        <strong>Adesione al protocollo</strong>
+
+        <div class="progress">
+            <div class="progress-bar" style="width:85%"></div>
+        </div>
+
+        <small style="color:#999;">
+            85% completato
+        </small>
+    </div>
+
+    <div class="section-title">Indicazioni</div>
+
+    <div class="list-item">
+        <div class="list-icon">🥗</div>
+        <div class="list-info">
+            <strong>Alimentazione</strong>
+            <small>Segui il piano alimentare assegnato</small>
+        </div>
+    </div>
+
+    <div class="list-item">
+        <div class="list-icon">💧</div>
+        <div class="list-info">
+            <strong>Idratazione</strong>
+            <small>Obiettivo giornaliero: 2,5 L</small>
+        </div>
+    </div>
+
+    <div class="list-item">
+        <div class="list-icon">😴</div>
+        <div class="list-info">
+            <strong>Recupero</strong>
+            <small>Priorità al sonno e al recupero</small>
+        </div>
+    </div>
+
+</section>
+
+
+<!-- INTEGRAZIONE -->
+
+<section id="integration" class="page">
+
+    <h1>Integrazione</h1>
+    <p class="card-text">
+        La tua integrazione giornaliera.
+    </p>
+
+    <div class="list-item">
+        <div class="list-icon">💊</div>
+        <div class="list-info">
+            <strong>Integratore 1</strong>
+            <small>Mattina • come da protocollo</small>
+        </div>
+        <button class="btn" style="margin:0;padding:8px 10px;"
+                onclick="this.innerText='✓'">
+            +
+        </button>
+    </div>
+
+    <div class="list-item">
+        <div class="list-icon">🥤</div>
+        <div class="list-info">
+            <strong>Integratore 2</strong>
+            <small>Pre workout</small>
+        </div>
+        <button class="btn" style="margin:0;padding:8px 10px;"
+                onclick="this.innerText='✓'">
+            +
+        </button>
+    </div>
+
+    <div class="list-item">
+        <div class="list-icon">💊</div>
+        <div class="list-info">
+            <strong>Integratore 3</strong>
+            <small>Sera • come da protocollo</small>
+        </div>
+        <button class="btn" style="margin:0;padding:8px 10px;"
+               
+          
