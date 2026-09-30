@@ -428,6 +428,7 @@ label {
 <section id="protocol" class="page">
 
     <h1>Protocollo</h1>
+
     <p class="card-text">
         Il tuo protocollo personalizzato.
     </p>
@@ -436,15 +437,16 @@ label {
         <strong>Adesione al protocollo</strong>
 
         <div class="progress">
-            <div class="progress-bar" style="width:85%"></div>
+            <div id="protocolProgress" class="progress-bar"
+                 style="width:0%"></div>
         </div>
 
-        <small style="color:#999;">
-            85% completato
+        <small id="protocolPercent" style="color:#999;">
+            0% completato
         </small>
     </div>
 
-    <div class="section-title">Indicazioni</div>
+    <div class="section-title">Checklist di oggi</div>
 
     <div class="list-item">
         <div class="list-icon">🥗</div>
@@ -452,6 +454,9 @@ label {
             <strong>Alimentazione</strong>
             <small>Segui il piano alimentare assegnato</small>
         </div>
+        <input type="checkbox"
+               class="protocol-check"
+               onchange="updateProtocol()">
     </div>
 
     <div class="list-item">
@@ -460,15 +465,47 @@ label {
             <strong>Idratazione</strong>
             <small>Obiettivo giornaliero: 2,5 L</small>
         </div>
+        <input type="checkbox"
+               class="protocol-check"
+               onchange="updateProtocol()">
+    </div>
+
+    <div class="list-item">
+        <div class="list-icon">🏋️</div>
+        <div class="list-info">
+            <strong>Allenamento</strong>
+            <small>Completa l'allenamento previsto</small>
+        </div>
+        <input type="checkbox"
+               class="protocol-check"
+               onchange="updateProtocol()">
     </div>
 
     <div class="list-item">
         <div class="list-icon">😴</div>
         <div class="list-info">
             <strong>Recupero</strong>
-            <small>Priorità al sonno e al recupero</small>
+            <small>Dai priorità al sonno e al recupero</small>
         </div>
+        <input type="checkbox"
+               class="protocol-check"
+               onchange="updateProtocol()">
     </div>
+
+    <div class="list-item">
+        <div class="list-icon">📊</div>
+        <div class="list-info">
+            <strong>Monitoraggio</strong>
+            <small>Compila il check giornaliero</small>
+        </div>
+        <input type="checkbox"
+               class="protocol-check"
+               onchange="updateProtocol()">
+    </div>
+
+    <button class="btn" onclick="resetProtocol()">
+        ↻ Azzera checklist
+    </button>
 
 </section>
 
@@ -670,7 +707,78 @@ function saveCheck() {
     alert("✓ Check giornaliero salvato!");
 
 }
+function updateProtocol() {
 
+    const checks = [];
+
+    document.querySelectorAll(".protocol-check")
+        .forEach(function(check) {
+            checks.push(check.checked);
+        });
+
+    localStorage.setItem(
+        "rz_protocol",
+        JSON.stringify(checks)
+    );
+
+    updateProtocolProgress();
+}
+
+
+function updateProtocolProgress() {
+
+    const checks =
+        document.querySelectorAll(".protocol-check");
+
+    let completed = 0;
+
+    checks.forEach(function(check) {
+        if (check.checked) {
+            completed++;
+        }
+    });
+
+    const percent =
+        Math.round((completed / checks.length) * 100);
+
+    document.getElementById("protocolProgress")
+        .style.width = percent + "%";
+
+    document.getElementById("protocolPercent")
+        .innerText = percent + "% completato";
+}
+
+
+function resetProtocol() {
+
+    document.querySelectorAll(".protocol-check")
+        .forEach(function(check) {
+            check.checked = false;
+        });
+
+    localStorage.removeItem("rz_protocol");
+
+    updateProtocolProgress();
+}
+
+
+function loadProtocol() {
+
+    const saved =
+        JSON.parse(localStorage.getItem("rz_protocol"));
+
+    if (!saved) return;
+
+    document.querySelectorAll(".protocol-check")
+        .forEach(function(check, index) {
+            check.checked = saved[index] || false;
+        });
+
+    updateProtocolProgress();
+}
+
+
+loadProtocol();
 </script>
 
 </body>
