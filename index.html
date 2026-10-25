@@ -560,52 +560,75 @@ label {
 </section>
 
 
+
 <!-- MONITORAGGIO -->
 
 <section id="monitoring" class="page">
 
     <h1>Monitoraggio</h1>
-
-    <p class="card-text">
-        Compila il tuo check giornaliero.
-    </p>
+    <p class="card-text">Compila il tuo check giornaliero.</p>
 
     <div class="section-title">Dati personali</div>
 
+    <label>Data del check</label>
+    <input type="date" id="dataCheck">
+
     <label>Peso (kg)</label>
-    <input type="number" id="peso" placeholder="Es. 80.5">
+    <input type="number" id="peso" step="0.1" placeholder="Es. 80.5">
+
+    <label>Ora in cui vai a letto</label>
+    <input type="time" id="oraLetto">
+
+    <label>Ora del risveglio</label>
+    <input type="time" id="oraSveglia">
 
     <label>Ore di sonno</label>
-    <input type="number" id="sonno" step="0.1" placeholder="Es. 7.5">
+    <input type="number" id="sonno" step="0.1" min="0" max="24" placeholder="Es. 7.5">
 
     <label>Qualità del sonno (1-10)</label>
     <input type="number" id="qualita" min="1" max="10" placeholder="1-10">
 
+    <label>Digestione</label>
+    <select id="digestione">
+        <option value="Nessun problema">Nessun problema</option>
+        <option value="Gonfiore">Gonfiore</option>
+        <option value="Stitichezza">Stitichezza</option>
+        <option value="Diarrea">Diarrea</option>
+        <option value="Altro">Altro</option>
+    </select>
+
+    <label>Descrivi eventuali problemi digestivi</label>
+    <textarea id="problemiDigestione" rows="2" placeholder="Descrivi il problema..."></textarea>
+
+    <label>Sei stato malato?</label>
+    <select id="malattia">
+        <option value="No">No</option>
+        <option value="Si">Sì</option>
+    </select>
+
     <label>Energia (1-10)</label>
     <input type="number" id="energia" min="1" max="10" placeholder="1-10">
-
-    <label>Stress (1-10)</label>
-    <input type="number" id="stress" min="1" max="10" placeholder="1-10">
 
     <label>Motivazione (1-10)</label>
     <input type="number" id="motivazione" min="1" max="10" placeholder="1-10">
 
-    <label>Digestione</label>
-    <select id="digestione">
-        <option>Nessun problema</option>
-        <option>Gonfiore</option>
-        <option>Stitichezza</option>
-        <option>Diarrea</option>
-        <option>Altro</option>
-    </select>
+    <label>Stress (1-10)</label>
+    <input type="number" id="stress" min="1" max="10" placeholder="1-10">
 
-    <label>Note</label>
-    <textarea id="note" rows="4"
-        placeholder="Scrivi eventuali note..."></textarea>
+    <label>Aderenza al protocollo (%)</label>
+    <input type="number" id="aderenza" min="0" max="100" placeholder="Es. 90">
 
-    <button class="btn" onclick="saveCheck()">
-        Salva check
-    </button>
+    <label>Note aggiuntive</label>
+    <textarea id="note" rows="4" placeholder="Scrivi eventuali note..."></textarea>
+
+    <button class="btn" onclick="saveCheck()">Salva check</button>
+
+    <div class="section-title">Ultimo check salvato</div>
+    <div class="card">
+        <div id="riepilogoCheck" class="card-text">
+            Nessun check salvato.
+        </div>
+    </div>
 
 </section>
 
@@ -692,24 +715,60 @@ function showPage(pageId, button) {
 }
 
 
+
 function saveCheck() {
+    const ids = [
+        "dataCheck",
+        "peso",
+        "oraLetto",
+        "oraSveglia",
+        "sonno",
+        "qualita",
+        "digestione",
+        "problemiDigestione",
+        "malattia",
+        "energia",
+        "motivazione",
+        "stress",
+        "aderenza",
+        "note"
+    ];
 
-    localStorage.setItem("rz_check", JSON.stringify({
+    const dati = {};
 
-        peso: document.getElementById("peso").value,
-        sonno: document.getElementById("sonno").value,
-        qualita: document.getElementById("qualita").value,
-        energia: document.getElementById("energia").value,
-        stress: document.getElementById("stress").value,
-        motivazione: document.getElementById("motivazione").value,
-        digestione: document.getElementById("digestione").value,
-        note: document.getElementById("note").value
+    ids.forEach(function(id) {
+        dati[id] = document.getElementById(id).value;
+    });
 
-    }));
+    if (!dati.dataCheck) {
+        const oggi = new Date();
+        dati.dataCheck =
+            oggi.getFullYear() + "-" +
+            String(oggi.getMonth() + 1).padStart(2, "0") + "-" +
+            String(oggi.getDate()).padStart(2, "0");
 
-    alert("✓ Check giornaliero salvato!");
+        document.getElementById("dataCheck").value = dati.dataCheck;
+    }
 
+    localStorage.setItem(
+        "rz_check_" + dati.dataCheck,
+        JSON.stringify(dati)
+    );
+
+    localStorage.setItem("rz_check", JSON.stringify(dati));
+
+    document.getElementById("riepilogoCheck").textContent =
+        "Data: " + dati.dataCheck +
+        " | Peso: " + (dati.peso || "—") + " kg" +
+        " | Sonno: " + (dati.sonno || "—") + " ore" +
+        " | Energia: " + (dati.energia || "—") +
+        " | Motivazione: " + (dati.motivazione || "—") +
+        " | Stress: " + (dati.stress || "—") +
+        " | Aderenza: " + (dati.aderenza || "—") + "%";
+
+    alert("Check giornaliero salvato!");
 }
+
 function updateProtocol() {
 
     const checks = [];
@@ -764,6 +823,37 @@ function resetProtocol() {
     updateProtocolProgress();
 }
 
+
+function loadCheck() {
+    const ultimo = localStorage.getItem("rz_check");
+
+    if (!ultimo) return;
+
+    const dati = JSON.parse(ultimo);
+
+    Object.keys(dati).forEach(function(id) {
+        const campo = document.getElementById(id);
+
+        if (campo) {
+            campo.value = dati[id] || "";
+        }
+    });
+
+    const riepilogo = document.getElementById("riepilogoCheck");
+
+    if (riepilogo) {
+        riepilogo.textContent =
+            "Data: " + (dati.dataCheck || "—") +
+            " | Peso: " + (dati.peso || "—") + " kg" +
+            " | Sonno: " + (dati.sonno || "—") + " ore" +
+            " | Energia: " + (dati.energia || "—") +
+            " | Motivazione: " + (dati.motivazione || "—") +
+            " | Stress: " + (dati.stress || "—") +
+            " | Aderenza: " + (dati.aderenza || "—") + "%";
+    }
+}
+
+loadCheck();
 
 function loadProtocol() {
 
