@@ -1816,6 +1816,108 @@ document.addEventListener("DOMContentLoaded", function() {
     mostraClienti();
 })();
 
+
+/* RZ COACHING - SCHEDA INDIVIDUALE CLIENTE */
+(function () {
+    const lista = document.getElementById("rzCoachList");
+    if (!lista || document.getElementById("rzSchedaCliente")) return;
+
+    const STORAGE_KEY = "rz_coaching_clienti_v1";
+
+    const contenitore = document.createElement("section");
+    contenitore.id = "rzSchedaCliente";
+    contenitore.className = "progress-box";
+    contenitore.style.display = "none";
+    contenitore.style.marginTop = "20px";
+
+    contenitore.innerHTML = `
+        <h2 style="color:var(--green)">Scheda cliente</h2>
+        <div id="rzSchedaDati"></div>
+
+        <h3 style="color:var(--green)">Area personale</h3>
+        <p class="card-text">
+            Qui organizzeremo allenamenti, monitoraggio,
+            protocollo e integrazione.
+        </p>
+
+        <button type="button" class="btn" id="rzSchedaChiudi">
+            Torna ai clienti
+        </button>
+    `;
+
+    lista.parentElement.appendChild(contenitore);
+
+    function leggiClienti() {
+        try {
+            const dati = JSON.parse(localStorage.getItem(STORAGE_KEY));
+            return Array.isArray(dati) ? dati : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function apriScheda(cliente) {
+        const dati = document.getElementById("rzSchedaDati");
+        dati.replaceChildren();
+
+        [
+            ["Nome", cliente.nome],
+            ["Contatto", cliente.contatto || "Non inserito"],
+            ["Obiettivo", cliente.obiettivo],
+            ["Note", cliente.note || "Nessuna nota"]
+        ].forEach(([etichetta, valore]) => {
+            const riga = document.createElement("p");
+            riga.className = "card-text";
+
+            const forte = document.createElement("strong");
+            forte.style.color = "var(--green)";
+            forte.textContent = etichetta + ": ";
+
+            riga.append(forte, document.createTextNode(valore));
+            dati.appendChild(riga);
+        });
+
+        contenitore.style.display = "block";
+        contenitore.scrollIntoView({ behavior: "smooth" });
+    }
+
+    // Aggiunge il pulsante "Apri scheda" a ogni cliente.
+    function aggiungiPulsanti() {
+        lista.querySelectorAll(".list-item").forEach(scheda => {
+            if (scheda.querySelector(".rzApriScheda")) return;
+
+            const titolo = scheda.querySelector("h3");
+            if (!titolo) return;
+
+            const nome = titolo.textContent;
+            const pulsante = document.createElement("button");
+            pulsante.type = "button";
+            pulsante.className = "btn rzApriScheda";
+            pulsante.textContent = "Apri scheda";
+            pulsante.style.marginTop = "8px";
+
+            pulsante.addEventListener("click", function () {
+                const cliente = leggiClienti().find(c => c.nome === nome);
+                if (cliente) apriScheda(cliente);
+                else alert("Cliente non trovato. Aggiorna la pagina e riprova.");
+            });
+
+            scheda.appendChild(pulsante);
+        });
+    }
+
+    document.getElementById("rzSchedaChiudi").addEventListener("click", function () {
+        contenitore.style.display = "none";
+    });
+
+    aggiungiPulsanti();
+
+    // Aggiorna i pulsanti quando viene aggiornata la lista clienti.
+    const osservatore = new MutationObserver(aggiungiPulsanti);
+    osservatore.observe(lista, { childList: true, subtree: true });
+})();
+
+    
 </script>
 
 </body>
