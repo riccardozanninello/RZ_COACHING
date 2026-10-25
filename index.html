@@ -1556,6 +1556,266 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 })();
 
+/* RZ COACHING - PANNELLO COACH E GESTIONE CLIENTI */
+(function () {
+    const main = document.querySelector("main.content");
+    if (!main || document.getElementById("rzCoachPanel")) return;
+
+    const STORAGE_KEY = "rz_coaching_clienti_v1";
+
+    function leggiClienti() {
+        try {
+            const dati = JSON.parse(localStorage.getItem(STORAGE_KEY));
+            return Array.isArray(dati) ? dati : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function salvaClienti(clienti) {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(clienti));
+            return true;
+        } catch (e) {
+            alert("Salvataggio non riuscito in questo browser.");
+            return false;
+        }
+    }
+
+    const pagina = document.createElement("section");
+    pagina.id = "rzCoachPanel";
+    pagina.className = "page";
+
+    pagina.innerHTML = `
+        <h1>Pannello Coach</h1>
+        <p class="card-text">
+            Gestione clienti e obiettivi personali.
+        </p>
+
+        <div class="progress-box">
+            <h2 style="color:var(--green)">Nuovo cliente</h2>
+
+            <form id="rzCoachForm">
+                <input type="hidden" id="rzCoachId">
+
+                <label for="rzCoachName">Nome cliente *</label>
+                <input id="rzCoachName" maxlength="80"
+                    placeholder="Nome e cognome" required>
+
+                <label for="rzCoachContact">Contatto</label>
+                <input id="rzCoachContact" maxlength="120"
+                    placeholder="Email o telefono">
+
+                <label for="rzCoachGoal">Obiettivo</label>
+                <select id="rzCoachGoal">
+                    <option value="Dimagrimento">Dimagrimento</option>
+                    <option value="Massa muscolare">Massa muscolare</option>
+                    <option value="Forza">Forza</option>
+                    <option value="Ricondizionamento">Ricondizionamento</option>
+                    <option value="Benessere generale">Benessere generale</option>
+                </select>
+
+                <label for="rzCoachNotes">Note</label>
+                <textarea id="rzCoachNotes" rows="3" maxlength="1000"
+                    placeholder="Note organizzative non sensibili"></textarea>
+
+                <button class="btn" type="submit" id="rzCoachSubmit">
+                    + Aggiungi cliente
+                </button>
+
+                <button class="btn" type="button" id="rzCoachCancel"
+                    style="display:none;margin-top:8px">
+                    Annulla modifica
+                </button>
+            </form>
+        </div>
+
+        <div class="progress-box">
+            <h2 style="color:var(--green)">I miei clienti</h2>
+            <p id="rzCoachCount" class="card-text"></p>
+            <div id="rzCoachList"></div>
+        </div>
+    `;
+
+    main.appendChild(pagina);
+
+    // Aggiunge un collegamento al pannello nella Home.
+    const homeGrid = document.querySelector("#home .grid");
+
+    if (homeGrid) {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.style.cursor = "pointer";
+        card.innerHTML = `
+            <div class="card-icon">👥</div>
+            <div class="card-title">Pannello Coach</div>
+            <div class="card-text">Gestione clienti</div>
+        `;
+        card.addEventListener("click", function () {
+            if (typeof window.showPage === "function") {
+                window.showPage("rzCoachPanel");
+            } else {
+                pagina.classList.add("active");
+            }
+        });
+        homeGrid.appendChild(card);
+    }
+
+    const form = document.getElementById("rzCoachForm");
+    const campoId = document.getElementById("rzCoachId");
+    const campoNome = document.getElementById("rzCoachName");
+    const campoContatto = document.getElementById("rzCoachContact");
+    const campoObiettivo = document.getElementById("rzCoachGoal");
+    const campoNote = document.getElementById("rzCoachNotes");
+    const pulsanteSalva = document.getElementById("rzCoachSubmit");
+    const pulsanteAnnulla = document.getElementById("rzCoachCancel");
+    const lista = document.getElementById("rzCoachList");
+
+    function creaTesto(tag, testo, classe) {
+        const el = document.createElement(tag);
+        el.textContent = testo;
+        if (classe) el.className = classe;
+        return el;
+    }
+
+    function mostraClienti() {
+        const clienti = leggiClienti();
+        document.getElementById("rzCoachCount").textContent =
+            clienti.length + (clienti.length === 1
+                ? " cliente registrato"
+                : " clienti registrati");
+
+        lista.replaceChildren();
+
+        if (clienti.length === 0) {
+            lista.appendChild(creaTesto(
+                "p",
+                "Non hai ancora aggiunto clienti.",
+                "card-text"
+            ));
+            return;
+        }
+
+        clienti.forEach(cliente => {
+            const scheda = document.createElement("div");
+            scheda.className = "list-item";
+            scheda.style.display = "block";
+            scheda.style.marginTop = "12px";
+
+            const titolo = creaTesto("h3", cliente.nome);
+            titolo.style.color = "var(--green)";
+            scheda.appendChild(titolo);
+
+            if (cliente.contatto) {
+                scheda.appendChild(creaTesto(
+                    "p", "Contatto: " + cliente.contatto, "card-text"
+                ));
+            }
+
+            scheda.appendChild(creaTesto(
+                "p", "Obiettivo: " + cliente.obiettivo, "card-text"
+            ));
+
+            if (cliente.note) {
+                scheda.appendChild(creaTesto(
+                    "p", "Note: " + cliente.note, "card-text"
+                ));
+            }
+
+            const azioni = document.createElement("div");
+            azioni.style.display = "flex";
+            azioni.style.gap = "8px";
+            azioni.style.flexWrap = "wrap";
+
+            const modifica = document.createElement("button");
+            modifica.type = "button";
+            modifica.className = "btn";
+            modifica.textContent = "Modifica";
+            modifica.addEventListener("click", function () {
+                campoId.value = cliente.id;
+                campoNome.value = cliente.nome;
+                campoContatto.value = cliente.contatto || "";
+                campoObiettivo.value = cliente.obiettivo;
+                campoNote.value = cliente.note || "";
+                pulsanteSalva.textContent = "Salva modifiche";
+                pulsanteAnnulla.style.display = "block";
+                pagina.scrollIntoView({ behavior: "smooth" });
+                campoNome.focus();
+            });
+
+            const elimina = document.createElement("button");
+            elimina.type = "button";
+            elimina.className = "btn";
+            elimina.textContent = "Elimina";
+            elimina.addEventListener("click", function () {
+                if (!confirm("Vuoi eliminare il cliente " + cliente.nome + "?")) {
+                    return;
+                }
+
+                const aggiornati = leggiClienti().filter(
+                    c => c.id !== cliente.id
+                );
+
+                if (salvaClienti(aggiornati)) {
+                    mostraClienti();
+                }
+            });
+
+            azioni.append(modifica, elimina);
+            scheda.appendChild(azioni);
+            lista.appendChild(scheda);
+        });
+    }
+
+    function resetForm() {
+        form.reset();
+        campoId.value = "";
+        pulsanteSalva.textContent = "+ Aggiungi cliente";
+        pulsanteAnnulla.style.display = "none";
+    }
+
+    form.addEventListener("submit", function (evento) {
+        evento.preventDefault();
+
+        const nome = campoNome.value.trim();
+
+        if (!nome) {
+            alert("Inserisci il nome del cliente.");
+            return;
+        }
+
+        const clienti = leggiClienti();
+        const idEsistente = campoId.value;
+
+        const cliente = {
+            id: idEsistente || (
+                Date.now().toString(36) +
+                Math.random().toString(36).slice(2, 8)
+            ),
+            nome,
+            contatto: campoContatto.value.trim(),
+            obiettivo: campoObiettivo.value,
+            note: campoNote.value.trim()
+        };
+
+        const aggiornati = idEsistente
+            ? clienti.map(c => c.id === idEsistente ? cliente : c)
+            : [...clienti, cliente];
+
+        if (salvaClienti(aggiornati)) {
+            resetForm();
+            mostraClienti();
+            alert(idEsistente
+                ? "Cliente aggiornato."
+                : "Cliente aggiunto correttamente.");
+        }
+    });
+
+    pulsanteAnnulla.addEventListener("click", resetForm);
+
+    mostraClienti();
+})();
+
 </script>
 
 </body>
