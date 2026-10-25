@@ -624,6 +624,15 @@ label {
     <button class="btn" onclick="saveCheck()">Salva check</button>
 
     <div class="section-title">Ultimo check salvato</div>
+    
+<div class="section-title">Storico check giornalieri</div>
+
+<div class="card">
+    <div id="storicoCheck" class="card-text">
+        Nessun check precedente disponibile.
+    </div>
+</div>
+
     <div class="card">
         <div id="riepilogoCheck" class="card-text">
             Nessun check salvato.
@@ -756,6 +765,7 @@ function saveCheck() {
     );
 
     localStorage.setItem("rz_check", JSON.stringify(dati));
+    renderHistory();
 
     document.getElementById("riepilogoCheck").textContent =
         "Data: " + dati.dataCheck +
@@ -824,34 +834,95 @@ function resetProtocol() {
 }
 
 
+
+function renderHistory() {
+    const storico = document.getElementById("storicoCheck");
+    if (!storico) return;
+
+    const registrazioni = [];
+
+    for (let i = 0; i < localStorage.length; i++) {
+        const chiave = localStorage.key(i);
+
+        if (chiave && /^rz_check_\d{4}-\d{2}-\d{2}$/.test(chiave)) {
+            try {
+                const dati = JSON.parse(localStorage.getItem(chiave));
+                if (dati) registrazioni.push(dati);
+            } catch (e) {
+                // Ignora eventuali registrazioni non valide
+            }
+        }
+    }
+
+    registrazioni.sort(function(a, b) {
+        return (b.dataCheck || "").localeCompare(a.dataCheck || "");
+    });
+
+    if (registrazioni.length === 0) {
+        storico.textContent = "Nessun check nello storico. Salva il tuo primo check.";
+        return;
+    }
+
+    storico.replaceChildren();
+
+    registrazioni.forEach(function(dati) {
+        const voce = document.createElement("div");
+        voce.style.padding = "12px 0";
+        voce.style.borderBottom = "1px solid #303030";
+
+        const titolo = document.createElement("strong");
+        titolo.style.display = "block";
+        titolo.style.color = "#39ff6a";
+        titolo.textContent = dati.dataCheck || "Data non disponibile";
+
+        const dettagli = document.createElement("p");
+        dettagli.style.marginTop = "6px";
+        dettagli.style.lineHeight = "1.7";
+        dettagli.textContent =
+            "Peso: " + (dati.peso || "—") + " kg" +
+            " | Sonno: " + (dati.sonno || "—") + " ore" +
+            " | Energia: " + (dati.energia || "—") +
+            " | Stress: " + (dati.stress || "—") +
+            " | Aderenza: " + (dati.aderenza || "—") + "%";
+
+        voce.appendChild(titolo);
+        voce.appendChild(dettagli);
+        storico.appendChild(voce);
+    });
+}
+
 function loadCheck() {
     const ultimo = localStorage.getItem("rz_check");
 
-    if (!ultimo) return;
+    if (ultimo) {
+        try {
+            const dati = JSON.parse(ultimo);
 
-    const dati = JSON.parse(ultimo);
+            Object.keys(dati).forEach(function(id) {
+                const campo = document.getElementById(id);
+                if (campo) campo.value = dati[id] || "";
+            });
 
-    Object.keys(dati).forEach(function(id) {
-        const campo = document.getElementById(id);
+            const riepilogo = document.getElementById("riepilogoCheck");
 
-        if (campo) {
-            campo.value = dati[id] || "";
+            if (riepilogo) {
+                riepilogo.textContent =
+                    "Data: " + (dati.dataCheck || "—") +
+                    " | Peso: " + (dati.peso || "—") + " kg" +
+                    " | Sonno: " + (dati.sonno || "—") + " ore" +
+                    " | Energia: " + (dati.energia || "—") +
+                    " | Motivazione: " + (dati.motivazione || "—") +
+                    " | Stress: " + (dati.stress || "—") +
+                    " | Aderenza: " + (dati.aderenza || "—") + "%";
+            }
+        } catch (e) {
+            console.error("Errore nel caricamento del check", e);
         }
-    });
-
-    const riepilogo = document.getElementById("riepilogoCheck");
-
-    if (riepilogo) {
-        riepilogo.textContent =
-            "Data: " + (dati.dataCheck || "—") +
-            " | Peso: " + (dati.peso || "—") + " kg" +
-            " | Sonno: " + (dati.sonno || "—") + " ore" +
-            " | Energia: " + (dati.energia || "—") +
-            " | Motivazione: " + (dati.motivazione || "—") +
-            " | Stress: " + (dati.stress || "—") +
-            " | Aderenza: " + (dati.aderenza || "—") + "%";
     }
+
+    renderHistory();
 }
+
 
 loadCheck();
 
