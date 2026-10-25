@@ -1918,6 +1918,294 @@ document.addEventListener("DOMContentLoaded", function() {
 })();
 
     
+/* RZ COACHING - MONITORAGGIO CLIENTI */
+(function () {
+    const LISTA_KEY = "rz_coaching_clienti_v1";
+    const PREFIX = "rz_monitoraggio_cliente_v1_";
+
+    const scheda = document.getElementById("rzSchedaCliente");
+    const datiCliente = document.getElementById("rzSchedaDati");
+
+    if (!scheda || !datiCliente || document.getElementById("rzMonitoraggio")) return;
+
+    const area = document.createElement("div");
+    area.id = "rzMonitoraggio";
+    area.innerHTML = `
+        <hr style="border-color:var(--green);margin:22px 0">
+        <h2 style="color:var(--green)">Monitoraggio giornaliero</h2>
+
+        <form id="rzMonitorForm">
+            <label for="rzMonitorData">Data</label>
+            <input type="date" id="rzMonitorData" required>
+
+            <label for="rzMonitorPeso">Peso (kg)</label>
+            <input type="number" id="rzMonitorPeso" min="0" max="500"
+                step="0.1" placeholder="Es. 78.5">
+
+            <label for="rzMonitorLetto">Orario in cui sei andato a letto</label>
+            <input type="time" id="rzMonitorLetto">
+
+            <label for="rzMonitorSveglia">Orario del risveglio</label>
+            <input type="time" id="rzMonitorSveglia">
+
+            <label for="rzMonitorOre">Ore di sonno</label>
+            <input type="number" id="rzMonitorOre" min="0" max="24"
+                step="0.25" placeholder="Es. 7.5">
+
+            <label for="rzMonitorQualita">Qualità del sonno (1-10)</label>
+            <input type="number" id="rzMonitorQualita" min="1" max="10"
+                step="1" placeholder="Da 1 a 10">
+
+            <label for="rzMonitorDigestione">Problemi digestivi?</label>
+            <select id="rzMonitorDigestione">
+                <option value="No">No</option>
+                <option value="Sì">Sì</option>
+            </select>
+
+            <label for="rzMonitorDigestioneNote">Descrizione problemi digestivi</label>
+            <textarea id="rzMonitorDigestioneNote" rows="2"
+                maxlength="1000" placeholder="Descrizione facoltativa"></textarea>
+
+            <label for="rzMonitorMalattia">Malattia o malessere?</label>
+            <select id="rzMonitorMalattia">
+                <option value="No">No</option>
+                <option value="Sì">Sì</option>
+            </select>
+
+            <label for="rzMonitorMotivazione">Motivazione (1-10)</label>
+            <input type="number" id="rzMonitorMotivazione" min="1" max="10"
+                step="1" placeholder="Da 1 a 10">
+
+            <label for="rzMonitorEnergia">Energia (1-10)</label>
+            <input type="number" id="rzMonitorEnergia" min="1" max="10"
+                step="1" placeholder="Da 1 a 10">
+
+            <label for="rzMonitorStress">Stress (1-10)</label>
+            <input type="number" id="rzMonitorStress" min="1" max="10"
+                step="1" placeholder="Da 1 a 10">
+
+            <label for="rzMonitorAderenza">Aderenza al programma</label>
+            <select id="rzMonitorAderenza">
+                <option value="">Seleziona</option>
+                <option value="100%">100% - Completamente</option>
+                <option value="75%">75% - Quasi tutto</option>
+                <option value="50%">50% - Parzialmente</option>
+                <option value="25%">25% - Poco</option>
+                <option value="0%">0% - Non seguito</option>
+            </select>
+
+            <label for="rzMonitorNote">Note giornaliere</label>
+            <textarea id="rzMonitorNote" rows="3" maxlength="2000"
+                placeholder="Commenti della giornata"></textarea>
+
+            <button type="submit" class="btn">Salva monitoraggio</button>
+        </form>
+
+        <h3 style="color:var(--green);margin-top:24px">Storico giornaliero</h3>
+        <div id="rzMonitorStorico"></div>
+    `;
+
+    scheda.appendChild(area);
+
+    const form = document.getElementById("rzMonitorForm");
+    const campoData = document.getElementById("rzMonitorData");
+    const storico = document.getElementById("rzMonitorStorico");
+
+    const campi = [
+        ["peso", "rzMonitorPeso"],
+        ["letto", "rzMonitorLetto"],
+        ["sveglia", "rzMonitorSveglia"],
+        ["oreSonno", "rzMonitorOre"],
+        ["qualitaSonno", "rzMonitorQualita"],
+        ["digestione", "rzMonitorDigestione"],
+        ["digestioneNote", "rzMonitorDigestioneNote"],
+        ["malattia", "rzMonitorMalattia"],
+        ["motivazione", "rzMonitorMotivazione"],
+        ["energia", "rzMonitorEnergia"],
+        ["stress", "rzMonitorStress"],
+        ["aderenza", "rzMonitorAderenza"],
+        ["note", "rzMonitorNote"]
+    ];
+
+    let clienteAttivo = null;
+    let caricamento = false;
+
+    function leggiClienti() {
+        try {
+            const clienti = JSON.parse(localStorage.getItem(LISTA_KEY));
+            return Array.isArray(clienti) ? clienti : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function chiaveCliente(id) {
+        return PREFIX + encodeURIComponent(id);
+    }
+
+    function leggiRegistrazioni() {
+        if (!clienteAttivo) return {};
+        try {
+            const dati = JSON.parse(
+                localStorage.getItem(chiaveCliente(clienteAttivo))
+            );
+            return dati && typeof dati === "object" ? dati : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function salvaRegistrazioni(registrazioni) {
+        try {
+            localStorage.setItem(
+                chiaveCliente(clienteAttivo),
+                JSON.stringify(registrazioni)
+            );
+            return true;
+        } catch (e) {
+            alert("Salvataggio non riuscito. Controlla lo spazio disponibile nel browser.");
+            return false;
+        }
+    }
+
+    function leggiForm() {
+        const risultato = {};
+        campi.forEach(([nome, id]) => {
+            risultato[nome] = document.getElementById(id).value;
+        });
+        return risultato;
+    }
+
+    function scriviForm(registro) {
+        caricamento = true;
+        campi.forEach(([nome, id]) => {
+            document.getElementById(id).value =
+                registro && registro[nome] != null ? registro[nome] : "";
+        });
+        caricamento = false;
+    }
+
+    function mostraStorico() {
+        storico.replaceChildren();
+        const registrazioni = leggiRegistrazioni();
+
+        const date = Object.keys(registrazioni).sort().reverse();
+
+        if (date.length === 0) {
+            const messaggio = document.createElement("p");
+            messaggio.className = "card-text";
+            messaggio.textContent = "Nessuna registrazione per questo cliente.";
+            storico.appendChild(messaggio);
+            return;
+        }
+
+        date.forEach(data => {
+            const registro = registrazioni[data];
+            const riga = document.createElement("div");
+            riga.className = "list-item";
+            riga.style.display = "block";
+            riga.style.marginTop = "10px";
+
+            const titolo = document.createElement("h4");
+            titolo.style.color = "var(--green)";
+            titolo.textContent = data;
+            riga.appendChild(titolo);
+
+            const riepilogo = [
+                ["Peso", registro.peso ? registro.peso + " kg" : ""],
+                ["Sonno", registro.oreSonno ? registro.oreSonno + " ore" : ""],
+                ["Qualità sonno", registro.qualitaSonno],
+                ["Digestione", registro.digestione],
+                ["Malessere", registro.malattia],
+                ["Motivazione", registro.motivazione],
+                ["Energia", registro.energia],
+                ["Stress", registro.stress],
+                ["Aderenza", registro.aderenza]
+            ].filter(voce => voce[1] !== "" && voce[1] != null);
+
+            riepilogo.forEach(([nome, valore]) => {
+                const p = document.createElement("p");
+                p.className = "card-text";
+                p.textContent = nome + ": " + valore;
+                riga.appendChild(p);
+            });
+
+            if (registro.note) {
+                const note = document.createElement("p");
+                note.className = "card-text";
+                note.textContent = "Note: " + registro.note;
+                riga.appendChild(note);
+            }
+
+            const modifica = document.createElement("button");
+            modifica.type = "button";
+            modifica.className = "btn";
+            modifica.textContent = "Carica questa giornata";
+            modifica.addEventListener("click", function () {
+                campoData.value = data;
+                scriviForm(registro);
+                form.scrollIntoView({ behavior: "smooth" });
+            });
+
+            riga.appendChild(modifica);
+            storico.appendChild(riga);
+        });
+    }
+
+    function aggiornaCliente() {
+        const clienti = leggiClienti();
+
+        // Il cliente viene identificato dai dati mostrati nella scheda.
+        const nomeVisualizzato = datiCliente.querySelector("p");
+        if (!nomeVisualizzato) return;
+
+        const testoNome = nomeVisualizzato.textContent.replace(/^Nome:\s*/, "").trim();
+        const cliente = clienti.find(c => c.nome === testoNome);
+
+        if (!cliente) return;
+
+        clienteAttivo = cliente.id;
+        mostraStorico();
+
+        const registrazioni = leggiRegistrazioni();
+        scriviForm(registrazioni[campoData.value] || {});
+    }
+
+    campoData.value = new Date().toLocaleDateString("en-CA");
+    campoData.addEventListener("change", function () {
+        const registrazioni = leggiRegistrazioni();
+        scriviForm(registrazioni[campoData.value] || {});
+    });
+
+    form.addEventListener("submit", function (evento) {
+        evento.preventDefault();
+        if (!clienteAttivo) {
+            alert("Apri prima la scheda di un cliente.");
+            return;
+        }
+
+        if (!campoData.value) {
+            alert("Seleziona una data.");
+            return;
+        }
+
+        const registrazioni = leggiRegistrazioni();
+        registrazioni[campoData.value] = leggiForm();
+
+        if (salvaRegistrazioni(registrazioni)) {
+            mostraStorico();
+            alert("Monitoraggio salvato per il cliente selezionato.");
+        }
+    });
+
+    const osservatore = new MutationObserver(aggiornaCliente);
+    osservatore.observe(datiCliente, { childList: true, subtree: true, characterData: true });
+
+    // Aggiorna il cliente anche quando si apre la scheda.
+    scheda.addEventListener("click", aggiornaCliente);
+})();
+
+    
 </script>
 
 </body>
