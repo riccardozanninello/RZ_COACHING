@@ -1034,6 +1034,153 @@ document.addEventListener("DOMContentLoaded", function() {
     loadProtocol();
     loadCheck();
 });
+    
+/* RZ COACHING - REGISTRAZIONE ALLENAMENTI */
+(function () {
+    const esercizi = [
+        { nome: "Panca piana", serie: 4, ripetizioni: 10 },
+        { nome: "Panca inclinata", serie: 3, ripetizioni: 12 },
+        { nome: "Push Down", serie: 3, ripetizioni: 15 }
+    ];
+
+    const sezione = document.getElementById("workout");
+    if (!sezione || document.getElementById("rzWorkoutTracker")) return;
+
+    const oggi = new Date().toISOString().slice(0, 10);
+    const chiave = "rz_workout_" + oggi;
+
+    let registrazioni = {};
+    try {
+        registrazioni = JSON.parse(localStorage.getItem(chiave)) || {};
+    } catch (e) {
+        registrazioni = {};
+    }
+
+    const pannello = document.createElement("div");
+    pannello.id = "rzWorkoutTracker";
+    pannello.className = "progress-box";
+    pannello.innerHTML = `
+        <h2 style="color:var(--green)">Registra allenamento</h2>
+        <p class="card-text">Inserisci i dati di ogni esercizio.</p>
+        <div id="rzWorkoutExercises"></div>
+        <div class="progress">
+            <div id="rzWorkoutProgress" class="progress-bar"
+                 style="width:0%"></div>
+        </div>
+        <p id="rzWorkoutStatus" style="color:var(--green)">
+            0 esercizi completati
+        </p>
+        <button type="button" class="btn" id="rzWorkoutSave">
+            Salva allenamento
+        </button>
+        <p id="rzWorkoutMessage" style="color:var(--green)"></p>
+    `;
+
+    const pulsanteCompleta = sezione.querySelector("button.btn");
+    if (pulsanteCompleta) {
+        pulsanteCompleta.insertAdjacentElement("beforebegin", pannello);
+        pulsanteCompleta.style.display = "none";
+    } else {
+        sezione.appendChild(pannello);
+    }
+
+    const contenitore = document.getElementById("rzWorkoutExercises");
+
+    esercizi.forEach((esercizio, indice) => {
+        const dati = registrazioni[indice] || {};
+        const scheda = document.createElement("div");
+        scheda.className = "list-item";
+        scheda.style.display = "block";
+        scheda.style.marginTop = "12px";
+
+        scheda.innerHTML = `
+            <strong style="color:var(--green)">
+                ${esercizio.nome}
+            </strong>
+            <p class="card-text">
+                Obiettivo: ${esercizio.serie} serie ×
+                ${esercizio.ripetizioni} ripetizioni
+            </p>
+            <label>Serie eseguite</label>
+            <input type="number" min="0" max="20"
+                   id="rzSets${indice}"
+                   value="${dati.serie ?? esercizio.serie}">
+            <label>Ripetizioni per serie</label>
+            <input type="number" min="0" max="100"
+                   id="rzReps${indice}"
+                   value="${dati.ripetizioni ?? esercizio.ripetizioni}">
+            <label>Peso utilizzato (kg)</label>
+            <input type="number" min="0" max="1000" step="0.5"
+                   id="rzWeight${indice}"
+                   value="${dati.peso ?? ""}"
+                   placeholder="Es. 40">
+            <label style="display:flex;align-items:center;gap:10px">
+                <input type="checkbox" id="rzDone${indice}"
+                       ${dati.completato ? "checked" : ""}
+                       style="width:auto;margin:0">
+                Esercizio completato
+            </label>
+        `;
+        contenitore.appendChild(scheda);
+    });
+
+    function aggiornaProgresso() {
+        const completati = esercizi.filter((_, i) =>
+            document.getElementById("rzDone" + i).checked
+        ).length;
+
+        document.getElementById("rzWorkoutProgress").style.width =
+            (completati / esercizi.length * 100) + "%";
+
+        document.getElementById("rzWorkoutStatus").textContent =
+            completati + " di " + esercizi.length +
+            " esercizi completati";
+    }
+
+    esercizi.forEach((_, i) => {
+        document.getElementById("rzDone" + i)
+            .addEventListener("change", aggiornaProgresso);
+    });
+
+    document.getElementById("rzWorkoutSave").addEventListener("click", function () {
+        const nuoviDati = {};
+
+        for (let i = 0; i < esercizi.length; i++) {
+            const serie = Number(document.getElementById("rzSets" + i).value);
+            const ripetizioni = Number(document.getElementById("rzReps" + i).value);
+            const pesoInput = document.getElementById("rzWeight" + i).value;
+            const peso = pesoInput === "" ? "" : Number(pesoInput);
+
+            if (serie < 0 || ripetizioni < 0 || (peso !== "" && peso < 0)) {
+                document.getElementById("rzWorkoutMessage").textContent =
+                    "Controlla i valori inseriti.";
+                return;
+            }
+
+            nuoviDati[i] = {
+                serie,
+                ripetizioni,
+                peso,
+                completato: document.getElementById("rzDone" + i).checked
+            };
+        }
+
+        try {
+            localStorage.setItem(chiave, JSON.stringify(nuoviDati));
+            registrazioni = nuoviDati;
+            document.getElementById("rzWorkoutMessage").textContent =
+                "Allenamento salvato correttamente!";
+        } catch (e) {
+            document.getElementById("rzWorkoutMessage").textContent =
+                "Salvataggio non riuscito in questo browser.";
+        }
+
+        aggiornaProgresso();
+    });
+
+    aggiornaProgresso();
+})();
+
 </script>
 
 </body>
