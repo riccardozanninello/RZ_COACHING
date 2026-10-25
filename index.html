@@ -727,78 +727,78 @@ label {
 
 
 <script>
-
 function showPage(pageId, button) {
-
-    document.querySelectorAll('.page').forEach(function(page) {
-        page.classList.remove('active');
+    document.querySelectorAll(".page").forEach(function(page) {
+        page.classList.remove("active");
     });
+    const page = document.getElementById(pageId);
+    if (page) page.classList.add("active");
 
-    document.getElementById(pageId).classList.add('active');
-
-    document.querySelectorAll('.nav-btn').forEach(function(btn) {
-        btn.classList.remove('active');
+    document.querySelectorAll(".nav-btn").forEach(function(btn) {
+        btn.classList.remove("active");
     });
+    if (button) button.classList.add("active");
 
-    if (button) {
-        button.classList.add('active');
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    // Ridisegna i grafici quando si apre Monitoraggio, così hanno la larghezza corretta.
+    if (pageId === "monitoring") {
+        renderWeightChart();
+        renderAllMetricCharts();
+        renderHistory();
     }
-
-    window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-    });
 }
 
+function getCheckIds() {
+    return [
+        "dataCheck", "peso", "oraLetto", "oraSveglia", "sonno", "qualita",
+        "digestione", "problemiDigestione", "malattia", "energia",
+        "motivazione", "stress", "aderenza", "note"
+    ];
+}
 
+function getSavedChecks() {
+    const registrazioni = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const chiave = localStorage.key(i);
+        if (!chiave || !/^rz_check_\d{4}-\d{2}-\d{2}$/.test(chiave)) continue;
+        try {
+            const dati = JSON.parse(localStorage.getItem(chiave));
+            if (dati && dati.dataCheck) registrazioni.push(dati);
+        } catch (e) {
+            // Ignora eventuali registrazioni non valide.
+        }
+    }
+    registrazioni.sort(function(a, b) {
+        return (a.dataCheck || "").localeCompare(b.dataCheck || "");
+    });
+    return registrazioni;
+}
 
 function saveCheck() {
-    const ids = [
-        "dataCheck",
-        "peso",
-        "oraLetto",
-        "oraSveglia",
-        "sonno",
-        "qualita",
-        "digestione",
-        "problemiDigestione",
-        "malattia",
-        "energia",
-        "motivazione",
-        "stress",
-        "aderenza",
-        "note"
-    ];
-
     const dati = {};
-
-    ids.forEach(function(id) {
-        dati[id] = document.getElementById(id).value;
+    getCheckIds().forEach(function(id) {
+        const campo = document.getElementById(id);
+        dati[id] = campo ? campo.value : "";
     });
 
     if (!dati.dataCheck) {
         const oggi = new Date();
-        dati.dataCheck =
-            oggi.getFullYear() + "-" +
+        dati.dataCheck = oggi.getFullYear() + "-" +
             String(oggi.getMonth() + 1).padStart(2, "0") + "-" +
             String(oggi.getDate()).padStart(2, "0");
-
         document.getElementById("dataCheck").value = dati.dataCheck;
     }
 
-    localStorage.setItem(
-        "rz_check_" + dati.dataCheck,
-        JSON.stringify(dati)
-    );
-    renderAllMetricCharts();
-
+    localStorage.setItem("rz_check_" + dati.dataCheck, JSON.stringify(dati));
     localStorage.setItem("rz_check", JSON.stringify(dati));
+
     renderHistory();
-renderWeightChart();
+    renderWeightChart();
     renderAllMetricCharts();
 
     document.getElementById("riepilogoCheck").textContent =
-        "Data: " + dati.dataCheck +
+        "Data: " + (dati.dataCheck || "—") +
         " | Peso: " + (dati.peso || "—") + " kg" +
         " | Sonno: " + (dati.sonno || "—") + " ore" +
         " | Energia: " + (dati.energia || "—") +
@@ -810,83 +810,40 @@ renderWeightChart();
 }
 
 function updateProtocol() {
-
     const checks = [];
-
-    document.querySelectorAll(".protocol-check")
-        .forEach(function(check) {
-            checks.push(check.checked);
-        });
-
-    localStorage.setItem(
-        "rz_protocol",
-        JSON.stringify(checks)
-    );
-
+    document.querySelectorAll(".protocol-check").forEach(function(check) {
+        checks.push(check.checked);
+    });
+    localStorage.setItem("rz_protocol", JSON.stringify(checks));
     updateProtocolProgress();
 }
-
 
 function updateProtocolProgress() {
-
-    const checks =
-        document.querySelectorAll(".protocol-check");
-
+    const checks = document.querySelectorAll(".protocol-check");
+    if (!checks.length) return;
     let completed = 0;
-
     checks.forEach(function(check) {
-        if (check.checked) {
-            completed++;
-        }
+        if (check.checked) completed++;
     });
-
-    const percent =
-        Math.round((completed / checks.length) * 100);
-
-    document.getElementById("protocolProgress")
-        .style.width = percent + "%";
-
-    document.getElementById("protocolPercent")
-        .innerText = percent + "% completato";
+    const percent = Math.round((completed / checks.length) * 100);
+    const progress = document.getElementById("protocolProgress");
+    const label = document.getElementById("protocolPercent");
+    if (progress) progress.style.width = percent + "%";
+    if (label) label.innerText = percent + "% completato";
 }
-
 
 function resetProtocol() {
-
-    document.querySelectorAll(".protocol-check")
-        .forEach(function(check) {
-            check.checked = false;
-        });
-
+    document.querySelectorAll(".protocol-check").forEach(function(check) {
+        check.checked = false;
+    });
     localStorage.removeItem("rz_protocol");
-
     updateProtocolProgress();
 }
-
-
 
 function renderHistory() {
     const storico = document.getElementById("storicoCheck");
     if (!storico) return;
-
-    const registrazioni = [];
-
-    for (let i = 0; i < localStorage.length; i++) {
-        const chiave = localStorage.key(i);
-
-        if (chiave && /^rz_check_\d{4}-\d{2}-\d{2}$/.test(chiave)) {
-            try {
-                const dati = JSON.parse(localStorage.getItem(chiave));
-                if (dati) registrazioni.push(dati);
-            } catch (e) {
-                // Ignora eventuali registrazioni non valide
-            }
-        }
-    }
-
-    registrazioni.sort(function(a, b) {
-        return (b.dataCheck || "").localeCompare(a.dataCheck || "");
-    });
+    const registrazioni = getSavedChecks().slice().reverse();
 
     if (registrazioni.length === 0) {
         storico.textContent = "Nessun check nello storico. Salva il tuo primo check.";
@@ -894,7 +851,6 @@ function renderHistory() {
     }
 
     storico.replaceChildren();
-
     registrazioni.forEach(function(dati) {
         const voce = document.createElement("div");
         voce.style.padding = "12px 0";
@@ -921,226 +877,86 @@ function renderHistory() {
     });
 }
 
-function renderWeightChart() {
-    const canvas = document.getElementById("graficoPeso");
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    const registrazioni = [];
-
-    for (let i = 0; i < localStorage.length; i++) {
-        const chiave = localStorage.key(i);
-
-        if (chiave && /^rz_check_\d{4}-\d{2}-\d{2}$/.test(chiave)) {
-            try {
-                const dati = JSON.parse(localStorage.getItem(chiave));
-
-                if (dati && dati.peso && Number(dati.peso) > 0) {
-                    registrazioni.push({
-                        data: dati.dataCheck,
-                        peso: Number(dati.peso)
-                    });
-                }
-            } catch (e) {}
-        }
-    }
-    
-function renderMetricChart(canvasId, campo, etichetta, scalaMassima) {
+function drawMetricChart(canvasId, campo, etichetta, scalaMassima, isWeight) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
-
     const ctx = canvas.getContext("2d");
-    const registrazioni = [];
+    if (!ctx) return;
 
-    for (let i = 0; i < localStorage.length; i++) {
-        const chiave = localStorage.key(i);
-
-        if (chiave && /^rz_check_\d{4}-\d{2}-\d{2}$/.test(chiave)) {
-            try {
-                const dati = JSON.parse(localStorage.getItem(chiave));
-                const valore = Number(dati && dati[campo]);
-
-                if (
-                    dati &&
-                    dati[campo] !== "" &&
-                    dati[campo] !== null &&
-                    Number.isFinite(valore) &&
-                    valore >= 0 &&
-                    valore <= scalaMassima
-                ) {
-                    registrazioni.push({
-                        data: dati.dataCheck,
-                        valore: valore
-                    });
-                }
-            } catch (e) {}
+    const registrazioni = getSavedChecks().map(function(dati) {
+        const valore = Number(dati[campo]);
+        if (dati[campo] === "" || dati[campo] === null || !Number.isFinite(valore) || valore < 0) {
+            return null;
         }
-    }
-
-    registrazioni.sort(function(a, b) {
-        return (a.data || "").localeCompare(b.data || "");
-    });
+        if (isWeight && valore <= 0) return null;
+        if (!isWeight && valore > scalaMassima) return null;
+        return { data: dati.dataCheck || "", valore: valore };
+    }).filter(Boolean);
 
     const rapporto = window.devicePixelRatio || 1;
-    const larghezza = canvas.clientWidth || 300;
+    const larghezza = Math.max(canvas.clientWidth || 300, 220);
     const altezza = 220;
-
     canvas.width = larghezza * rapporto;
     canvas.height = altezza * rapporto;
-    ctx.scale(rapporto, rapporto);
+    canvas.style.width = "100%";
+    canvas.style.height = altezza + "px";
+    ctx.setTransform(rapporto, 0, 0, rapporto, 0, 0);
     ctx.clearRect(0, 0, larghezza, altezza);
-
     ctx.font = "12px Arial";
     ctx.fillStyle = "#39ff6a";
     ctx.strokeStyle = "#303030";
     ctx.lineWidth = 1;
 
     if (registrazioni.length === 0) {
-        ctx.fillText("Salva un check con " + etichetta + ".", 10, 30);
+        ctx.fillText("Salva un check con " + etichetta + " per vedere il grafico.", 10, 30);
         return;
     }
 
-    const margine = { alto: 20, basso: 35, lati: 38 };
-    const areaLarghezza = larghezza - margine.lati * 2;
+    const margine = { alto: 20, basso: 35, lati: 42 };
+    const areaLarghezza = Math.max(1, larghezza - margine.lati * 2);
     const areaAltezza = altezza - margine.alto - margine.basso;
+    let minimo, massimo;
 
-    for (let i = 0; i <= 4; i++) {
-        const y = margine.alto + areaAltezza * i / 4;
-
-        ctx.beginPath();
-        ctx.moveTo(margine.lati, y);
-        ctx.lineTo(larghezza - margine.lati, y);
-        ctx.stroke();
-
-        ctx.fillText(
-            (scalaMassima - scalaMassima * i / 4).toFixed(1),
-            2,
-            y + 4
-        );
+    if (isWeight) {
+        const valori = registrazioni.map(function(r) { return r.valore; });
+        minimo = Math.max(0, Math.min.apply(null, valori) - 1);
+        massimo = Math.max.apply(null, valori) + 1;
+        if (massimo === minimo) massimo = minimo + 1;
+    } else {
+        minimo = 0;
+        massimo = scalaMassima;
     }
-
-    ctx.strokeStyle = "#39ff6a";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-
-    registrazioni.forEach(function(r, i) {
-        const x = registrazioni.length === 1
-            ? larghezza / 2
-            : margine.lati + areaLarghezza * i / (registrazioni.length - 1);
-
-        const y = margine.alto +
-            (scalaMassima - r.valore) / scalaMassima * areaAltezza;
-
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-    });
-
-    ctx.stroke();
-
-    registrazioni.forEach(function(r, i) {
-        const x = registrazioni.length === 1
-            ? larghezza / 2
-            : margine.lati + areaLarghezza * i / (registrazioni.length - 1);
-
-        const y = margine.alto +
-            (scalaMassima - r.valore) / scalaMassima * areaAltezza;
-
-        ctx.fillStyle = "#39ff6a";
-        ctx.beginPath();
-        ctx.arc(x, y, 4, 0, Math.PI * 2);
-        ctx.fill();
-    });
-
-    ctx.fillStyle = "#39ff6a";
-    ctx.fillText(registrazioni[0].data || "", margine.lati, altezza - 10);
-
-    const ultimaData = registrazioni[registrazioni.length - 1].data || "";
-    const testoLarghezza = ctx.measureText(ultimaData).width;
-
-    ctx.fillText(
-        ultimaData,
-        Math.max(margine.lati, larghezza - margine.lati - testoLarghezza),
-        altezza - 10
-    );
-}
-
-
-    registrazioni.sort(function(a, b) {
-        return (a.data || "").localeCompare(b.data || "");
-    });
-
-    const rapporto = window.devicePixelRatio || 1;
-    const larghezza = canvas.clientWidth || 300;
-    const altezza = 220;
-
-    canvas.width = larghezza * rapporto;
-    canvas.height = altezza * rapporto;
-    ctx.scale(rapporto, rapporto);
-
-    ctx.clearRect(0, 0, larghezza, altezza);
-    ctx.font = "12px Arial";
-    ctx.fillStyle = "#39ff6a";
-    ctx.strokeStyle = "#39ff6a";
-    ctx.lineWidth = 2;
-
-    if (registrazioni.length === 0) {
-        ctx.fillText("Salva un check con il peso per vedere il grafico.", 10, 30);
-        return;
-    }
-
-    const margine = { alto: 20, basso: 35, lati: 38 };
-    const areaLarghezza = larghezza - margine.lati * 2;
-    const areaAltezza = altezza - margine.alto - margine.basso;
-
-    const pesi = registrazioni.map(function(r) {
-        return r.peso;
-    });
-
-    const minimo = Math.min(...pesi) - 1;
-    const massimo = Math.max(...pesi) + 1;
     const intervallo = massimo - minimo || 1;
 
-    ctx.strokeStyle = "#303030";
-    ctx.fillStyle = "#39ff6a";
-    ctx.lineWidth = 1;
-
     for (let i = 0; i <= 4; i++) {
         const y = margine.alto + areaAltezza * i / 4;
         ctx.beginPath();
         ctx.moveTo(margine.lati, y);
         ctx.lineTo(larghezza - margine.lati, y);
         ctx.stroke();
-
-        const valore = massimo - intervallo * i / 4;
-        ctx.fillText(valore.toFixed(1), 2, y + 4);
+        const valoreScala = massimo - intervallo * i / 4;
+        ctx.fillStyle = "#39ff6a";
+        ctx.fillText(isWeight ? valoreScala.toFixed(1) : valoreScala.toFixed(0), 2, y + 4);
     }
 
     ctx.strokeStyle = "#39ff6a";
     ctx.lineWidth = 2;
     ctx.beginPath();
-
     registrazioni.forEach(function(r, i) {
         const x = registrazioni.length === 1
             ? larghezza / 2
             : margine.lati + areaLarghezza * i / (registrazioni.length - 1);
-
-        const y = margine.alto +
-            (massimo - r.peso) / intervallo * areaAltezza;
-
+        const y = margine.alto + (massimo - r.valore) / intervallo * areaAltezza;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
     });
-
     ctx.stroke();
 
     registrazioni.forEach(function(r, i) {
         const x = registrazioni.length === 1
             ? larghezza / 2
             : margine.lati + areaLarghezza * i / (registrazioni.length - 1);
-
-        const y = margine.alto +
-            (massimo - r.peso) / intervallo * areaAltezza;
-
+        const y = margine.alto + (massimo - r.valore) / intervallo * areaAltezza;
         ctx.fillStyle = "#39ff6a";
         ctx.beginPath();
         ctx.arc(x, y, 4, 0, Math.PI * 2);
@@ -1148,31 +964,39 @@ function renderMetricChart(canvasId, campo, etichetta, scalaMassima) {
     });
 
     ctx.fillStyle = "#39ff6a";
-    ctx.fillText(registrazioni[0].data || "", margine.lati, altezza - 10);
+    ctx.fillText(registrazioni[0].data, margine.lati, altezza - 10);
+    const ultimaData = registrazioni[registrazioni.length - 1].data;
+    const testoLarghezza = ctx.measureText(ultimaData).width;
+    ctx.fillText(ultimaData,
+        Math.max(margine.lati, larghezza - margine.lati - testoLarghezza),
+        altezza - 10);
+}
 
-    const ultimaData = registrazioni[registrazioni.length - 1].data || "";
-    const larghezzaTesto = ctx.measureText(ultimaData).width;
-    ctx.fillText(
-        ultimaData,
-        Math.max(margine.lati, larghezza - margine.lati - larghezzaTesto),
-        altezza - 10
-    );
+function renderWeightChart() {
+    drawMetricChart("graficoPeso", "peso", "il peso", 0, true);
+}
+
+function renderMetricChart(canvasId, campo, etichetta, scalaMassima) {
+    drawMetricChart(canvasId, campo, etichetta, scalaMassima, false);
+}
+
+function renderAllMetricCharts() {
+    renderMetricChart("graficoSonno", "sonno", "le ore di sonno", 12);
+    renderMetricChart("graficoEnergia", "energia", "l'energia", 10);
+    renderMetricChart("graficoStress", "stress", "lo stress", 10);
+    renderMetricChart("graficoMotivazione", "motivazione", "la motivazione", 10);
 }
 
 function loadCheck() {
     const ultimo = localStorage.getItem("rz_check");
-
     if (ultimo) {
         try {
             const dati = JSON.parse(ultimo);
-
             Object.keys(dati).forEach(function(id) {
                 const campo = document.getElementById(id);
                 if (campo) campo.value = dati[id] || "";
             });
-
             const riepilogo = document.getElementById("riepilogoCheck");
-
             if (riepilogo) {
                 riepilogo.textContent =
                     "Data: " + (dati.dataCheck || "—") +
@@ -1187,38 +1011,29 @@ function loadCheck() {
             console.error("Errore nel caricamento del check", e);
         }
     }
-
     renderHistory();
+    renderWeightChart();
+    renderAllMetricCharts();
 }
-
-function renderAllMetricCharts() {
-    renderMetricChart("graficoSonno", "sonno", "le ore di sonno", 12);
-    renderMetricChart("graficoEnergia", "energia", "l'energia", 10);
-    renderMetricChart("graficoStress", "stress", "lo stress", 10);
-    renderMetricChart("graficoMotivazione", "motivazione", "la motivazione", 10);
-}
-renderWeightChart();
-renderAllMetricCharts();
-
-loadCheck();
 
 function loadProtocol() {
-
-    const saved =
-        JSON.parse(localStorage.getItem("rz_protocol"));
-
+    let saved;
+    try {
+        saved = JSON.parse(localStorage.getItem("rz_protocol"));
+    } catch (e) {
+        saved = null;
+    }
     if (!saved) return;
-
-    document.querySelectorAll(".protocol-check")
-        .forEach(function(check, index) {
-            check.checked = saved[index] || false;
-        });
-
+    document.querySelectorAll(".protocol-check").forEach(function(check, index) {
+        check.checked = Boolean(saved[index]);
+    });
     updateProtocolProgress();
 }
 
-
-loadProtocol();
+document.addEventListener("DOMContentLoaded", function() {
+    loadProtocol();
+    loadCheck();
+});
 </script>
 
 </body>
