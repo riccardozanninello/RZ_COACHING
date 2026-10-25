@@ -790,6 +790,7 @@ function saveCheck() {
         "rz_check_" + dati.dataCheck,
         JSON.stringify(dati)
     );
+    renderAllMetricCharts();
 
     localStorage.setItem("rz_check", JSON.stringify(dati));
     renderHistory();
