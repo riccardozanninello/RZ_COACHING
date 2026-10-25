@@ -646,6 +646,26 @@ label {
         <canvas id="graficoPeso" height="220"></canvas>
     </div>
 
+<div class="card">
+    <p class="card-text">Andamento del sonno (ore)</p>
+    <canvas id="graficoSonno" height="220"></canvas>
+</div>
+
+<div class="card">
+    <p class="card-text">Andamento dell'energia (1-10)</p>
+    <canvas id="graficoEnergia" height="220"></canvas>
+</div>
+
+<div class="card">
+    <p class="card-text">Andamento dello stress (1-10)</p>
+    <canvas id="graficoStress" height="220"></canvas>
+</div>
+
+<div class="card">
+    <p class="card-text">Andamento della motivazione (1-10)</p>
+    <canvas id="graficoMotivazione" height="220"></canvas>
+</div>
+
 </section>
 
 
@@ -774,6 +794,7 @@ function saveCheck() {
     localStorage.setItem("rz_check", JSON.stringify(dati));
     renderHistory();
 renderWeightChart();
+    renderAllMetricCharts();
 
     document.getElementById("riepilogoCheck").textContent =
         "Data: " + dati.dataCheck +
@@ -922,6 +943,126 @@ function renderWeightChart() {
             } catch (e) {}
         }
     }
+    
+function renderMetricChart(canvasId, campo, etichetta, scalaMassima) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    const registrazioni = [];
+
+    for (let i = 0; i < localStorage.length; i++) {
+        const chiave = localStorage.key(i);
+
+        if (chiave && /^rz_check_\d{4}-\d{2}-\d{2}$/.test(chiave)) {
+            try {
+                const dati = JSON.parse(localStorage.getItem(chiave));
+                const valore = Number(dati && dati[campo]);
+
+                if (
+                    dati &&
+                    dati[campo] !== "" &&
+                    dati[campo] !== null &&
+                    Number.isFinite(valore) &&
+                    valore >= 0 &&
+                    valore <= scalaMassima
+                ) {
+                    registrazioni.push({
+                        data: dati.dataCheck,
+                        valore: valore
+                    });
+                }
+            } catch (e) {}
+        }
+    }
+
+    registrazioni.sort(function(a, b) {
+        return (a.data || "").localeCompare(b.data || "");
+    });
+
+    const rapporto = window.devicePixelRatio || 1;
+    const larghezza = canvas.clientWidth || 300;
+    const altezza = 220;
+
+    canvas.width = larghezza * rapporto;
+    canvas.height = altezza * rapporto;
+    ctx.scale(rapporto, rapporto);
+    ctx.clearRect(0, 0, larghezza, altezza);
+
+    ctx.font = "12px Arial";
+    ctx.fillStyle = "#39ff6a";
+    ctx.strokeStyle = "#303030";
+    ctx.lineWidth = 1;
+
+    if (registrazioni.length === 0) {
+        ctx.fillText("Salva un check con " + etichetta + ".", 10, 30);
+        return;
+    }
+
+    const margine = { alto: 20, basso: 35, lati: 38 };
+    const areaLarghezza = larghezza - margine.lati * 2;
+    const areaAltezza = altezza - margine.alto - margine.basso;
+
+    for (let i = 0; i <= 4; i++) {
+        const y = margine.alto + areaAltezza * i / 4;
+
+        ctx.beginPath();
+        ctx.moveTo(margine.lati, y);
+        ctx.lineTo(larghezza - margine.lati, y);
+        ctx.stroke();
+
+        ctx.fillText(
+            (scalaMassima - scalaMassima * i / 4).toFixed(1),
+            2,
+            y + 4
+        );
+    }
+
+    ctx.strokeStyle = "#39ff6a";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    registrazioni.forEach(function(r, i) {
+        const x = registrazioni.length === 1
+            ? larghezza / 2
+            : margine.lati + areaLarghezza * i / (registrazioni.length - 1);
+
+        const y = margine.alto +
+            (scalaMassima - r.valore) / scalaMassima * areaAltezza;
+
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    });
+
+    ctx.stroke();
+
+    registrazioni.forEach(function(r, i) {
+        const x = registrazioni.length === 1
+            ? larghezza / 2
+            : margine.lati + areaLarghezza * i / (registrazioni.length - 1);
+
+        const y = margine.alto +
+            (scalaMassima - r.valore) / scalaMassima * areaAltezza;
+
+        ctx.fillStyle = "#39ff6a";
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    ctx.fillStyle = "#39ff6a";
+    ctx.fillText(registrazioni[0].data || "", margine.lati, altezza - 10);
+
+    const ultimaData = registrazioni[registrazioni.length - 1].data || "";
+    const testoLarghezza = ctx.measureText(ultimaData).width;
+
+    ctx.fillText(
+        ultimaData,
+        Math.max(margine.lati, larghezza - margine.lati - testoLarghezza),
+        altezza - 10
+    );
+}
+
 
     registrazioni.sort(function(a, b) {
         return (a.data || "").localeCompare(b.data || "");
@@ -1048,6 +1189,15 @@ function loadCheck() {
 
     renderHistory();
 }
+
+function renderAllMetricCharts() {
+    renderMetricChart("graficoSonno", "sonno", "le ore di sonno", 12);
+    renderMetricChart("graficoEnergia", "energia", "l'energia", 10);
+    renderMetricChart("graficoStress", "stress", "lo stress", 10);
+    renderMetricChart("graficoMotivazione", "motivazione", "la motivazione", 10);
+}
+
+renderAllMetricCharts();
 
 renderWeightChart();
 
