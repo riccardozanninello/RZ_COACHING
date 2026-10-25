@@ -2206,6 +2206,206 @@ document.addEventListener("DOMContentLoaded", function() {
 })();
 
     
+/* RZ COACHING - GRAFICI MONITORAGGIO CLIENTE */
+(function () {
+    const PREFIX = "rz_monitoraggio_cliente_v1_";
+    const scheda = document.getElementById("rzSchedaCliente");
+
+    if (!scheda || document.getElementById("rzGraficiMonitoraggio")) return;
+
+    const area = document.createElement("div");
+    area.id = "rzGraficiMonitoraggio";
+    area.innerHTML = `
+        <hr style="border-color:var(--green);margin:24px 0">
+        <h2 style="color:var(--green)">Andamento del cliente</h2>
+        <p class="card-text">I grafici utilizzano le registrazioni del cliente selezionato.</p>
+        <div id="rzGraficiContenuto"></div>
+    `;
+
+    scheda.appendChild(area);
+
+    function creaGrafico(titolo, campo, colore, suffisso, min, max) {
+        const registrazioni = leggiRegistrazioni();
+        const punti = Object.keys(registrazioni)
+            .sort()
+            .map(data => ({
+                data,
+                valore: parseFloat(registrazioni[data][campo])
+            }))
+            .filter(p => Number.isFinite(p.valore));
+
+        const box = document.createElement("div");
+        box.className = "progress-box";
+        box.style.marginTop = "16px";
+
+        const h3 = document.createElement("h3");
+        h3.style.color = "var(--green)";
+        h3.textContent = titolo;
+        box.appendChild(h3);
+
+        if (punti.length === 0) {
+            const messaggio = document.createElement("p");
+            messaggio.className = "card-text";
+            messaggio.textContent = "Registra almeno un valore per visualizzare il grafico.";
+            box.appendChild(messaggio);
+            return box;
+        }
+
+        const larghezza = 320;
+        const altezza = 150;
+        const margine = 28;
+        const internoW = larghezza - margine * 2;
+        const internoH = altezza - margine * 2;
+
+        const valori = punti.map(p => p.valore);
+        let minimo = min == null ? Math.min(...valori) : min;
+        let massimo = max == null ? Math.max(...valori) : max;
+
+        if (minimo === massimo) {
+            minimo -= 1;
+            massimo += 1;
+        }
+
+        const x = i => margine + (
+            punti.length === 1 ? internoW / 2 : i * internoW / (punti.length - 1)
+        );
+        const y = v => altezza - margine -
+            ((v - minimo) / (massimo - minimo)) * internoH;
+
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("viewBox", `0 0 ${larghezza} ${altezza}`);
+        svg.setAttribute("width", "100%");
+        svg.setAttribute("role", "img");
+        svg.setAttribute("aria-label", titolo);
+        svg.style.maxWidth = "520px";
+        svg.style.display = "block";
+
+        [0, 0.5, 1].forEach(frazione => {
+            const linea = document.createElementNS(svg.namespaceURI, "line");
+            const yy = margine + frazione * internoH;
+            linea.setAttribute("x1", margine);
+            linea.setAttribute("x2", larghezza - margine);
+            linea.setAttribute("y1", yy);
+            linea.setAttribute("y2", yy);
+            linea.setAttribute("stroke", "#35513b");
+            linea.setAttribute("stroke-width", "1");
+            svg.appendChild(linea);
+        });
+
+        const percorso = punti.map((p, i) =>
+            `${i === 0 ? "M" : "L"} ${x(i)} ${y(p.valore)}`
+        ).join(" ");
+
+        const linea = document.createElementNS(svg.namespaceURI, "path");
+        linea.setAttribute("d", percorso);
+        linea.setAttribute("fill", "none");
+        linea.setAttribute("stroke", colore);
+        linea.setAttribute("stroke-width", "3");
+        linea.setAttribute("stroke-linejoin", "round");
+        linea.setAttribute("stroke-linecap", "round");
+        svg.appendChild(linea);
+
+        punti.forEach((p, i) => {
+            const cerchio = document.createElementNS(svg.namespaceURI, "circle");
+            cerchio.setAttribute("cx", x(i));
+            cerchio.setAttribute("cy", y(p.valore));
+            cerchio.setAttribute("r", "4");
+            cerchio.setAttribute("fill", colore);
+            svg.appendChild(cerchio);
+        });
+
+        box.appendChild(svg);
+
+        const ultimo = document.createElement("p");
+        ultimo.className = "card-text";
+        ultimo.textContent = "Ultimo valore: " +
+            punti[punti.length - 1].valore + suffisso +
+            " (" + punti[punti.length - 1].data + ")";
+        box.appendChild(ultimo);
+
+        const elenco = document.createElement("details");
+        const riepilogo = document.createElement("summary");
+        riepilogo.textContent = "Vedi valori registrati";
+        riepilogo.style.cursor = "pointer";
+        riepilogo.style.color = "var(--green)";
+        elenco.appendChild(riepilogo);
+
+        punti.slice().reverse().forEach(p => {
+            const riga = document.createElement("p");
+            riga.className = "card-text";
+            riga.textContent = p.data + ": " + p.valore + suffisso;
+            elenco.appendChild(riga);
+        });
+
+        box.appendChild(elenco);
+        return box;
+    }
+
+    function leggiRegistrazioni() {
+        if (!clienteAttivo) return {};
+        try {
+            return JSON.parse(
+                localStorage.getItem(PREFIX + encodeURIComponent(clienteAttivo))
+            ) || {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    let clienteAttivo = null;
+
+    function aggiornaGrafici() {
+        const dati = document.getElementById("rzSchedaDati");
+        if (!dati) return;
+
+        const primaRiga = dati.querySelector("p");
+        if (!primaRiga) return;
+
+        const nome = primaRiga.textContent.replace(/^Nome:\s*/, "").trim();
+        let clienti = [];
+
+        try {
+            clienti = JSON.parse(localStorage.getItem("rz_coaching_clienti_v1")) || [];
+        } catch (e) {
+            return;
+        }
+
+        const cliente = clienti.find(c => c.nome === nome);
+        if (!cliente) return;
+
+        clienteAttivo = cliente.id;
+
+        const target = document.getElementById("rzGraficiContenuto");
+        target.replaceChildren();
+
+        target.appendChild(creaGrafico("Peso corporeo", "peso", "#39e75f", " kg"));
+        target.appendChild(creaGrafico("Qualità del sonno", "qualitaSonno", "#6ee7a0", "/10", 1, 10));
+        target.appendChild(creaGrafico("Motivazione", "motivazione", "#39e75f", "/10", 1, 10));
+        target.appendChild(creaGrafico("Energia", "energia", "#8bffb0", "/10", 1, 10));
+        target.appendChild(creaGrafico("Stress", "stress", "#b4f5c8", "/10", 1, 10));
+    }
+
+    const dati = document.getElementById("rzSchedaDati");
+    const monitor = document.getElementById("rzMonitoraggio");
+
+    if (dati) {
+        new MutationObserver(aggiornaGrafici).observe(dati, {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
+    }
+
+    if (monitor) {
+        monitor.addEventListener("click", aggiornaGrafici);
+        monitor.addEventListener("change", aggiornaGrafici);
+    }
+
+    // Primo aggiornamento e aggiornamento periodico tramite interazioni.
+    aggiornaGrafici();
+})();
+
+    
 </script>
 
 </body>
