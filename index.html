@@ -639,6 +639,13 @@ label {
         </div>
     </div>
 
+    <div class="section-title">Grafici dei progressi</div>
+
+    <div class="card">
+        <p class="card-text">Andamento del peso (kg)</p>
+        <canvas id="graficoPeso" height="220"></canvas>
+    </div>
+
 </section>
 
 
@@ -766,6 +773,7 @@ function saveCheck() {
 
     localStorage.setItem("rz_check", JSON.stringify(dati));
     renderHistory();
+renderWeightChart();
 
     document.getElementById("riepilogoCheck").textContent =
         "Data: " + dati.dataCheck +
@@ -891,6 +899,124 @@ function renderHistory() {
     });
 }
 
+function renderWeightChart() {
+    const canvas = document.getElementById("graficoPeso");
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    const registrazioni = [];
+
+    for (let i = 0; i < localStorage.length; i++) {
+        const chiave = localStorage.key(i);
+
+        if (chiave && /^rz_check_\d{4}-\d{2}-\d{2}$/.test(chiave)) {
+            try {
+                const dati = JSON.parse(localStorage.getItem(chiave));
+
+                if (dati && dati.peso && Number(dati.peso) > 0) {
+                    registrazioni.push({
+                        data: dati.dataCheck,
+                        peso: Number(dati.peso)
+                    });
+                }
+            } catch (e) {}
+        }
+    }
+
+    registrazioni.sort(function(a, b) {
+        return (a.data || "").localeCompare(b.data || "");
+    });
+
+    const rapporto = window.devicePixelRatio || 1;
+    const larghezza = canvas.clientWidth || 300;
+    const altezza = 220;
+
+    canvas.width = larghezza * rapporto;
+    canvas.height = altezza * rapporto;
+    ctx.scale(rapporto, rapporto);
+
+    ctx.clearRect(0, 0, larghezza, altezza);
+    ctx.font = "12px Arial";
+    ctx.fillStyle = "#39ff6a";
+    ctx.strokeStyle = "#39ff6a";
+    ctx.lineWidth = 2;
+
+    if (registrazioni.length === 0) {
+        ctx.fillText("Salva un check con il peso per vedere il grafico.", 10, 30);
+        return;
+    }
+
+    const margine = { alto: 20, basso: 35, lati: 38 };
+    const areaLarghezza = larghezza - margine.lati * 2;
+    const areaAltezza = altezza - margine.alto - margine.basso;
+
+    const pesi = registrazioni.map(function(r) {
+        return r.peso;
+    });
+
+    const minimo = Math.min(...pesi) - 1;
+    const massimo = Math.max(...pesi) + 1;
+    const intervallo = massimo - minimo || 1;
+
+    ctx.strokeStyle = "#303030";
+    ctx.fillStyle = "#39ff6a";
+    ctx.lineWidth = 1;
+
+    for (let i = 0; i <= 4; i++) {
+        const y = margine.alto + areaAltezza * i / 4;
+        ctx.beginPath();
+        ctx.moveTo(margine.lati, y);
+        ctx.lineTo(larghezza - margine.lati, y);
+        ctx.stroke();
+
+        const valore = massimo - intervallo * i / 4;
+        ctx.fillText(valore.toFixed(1), 2, y + 4);
+    }
+
+    ctx.strokeStyle = "#39ff6a";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    registrazioni.forEach(function(r, i) {
+        const x = registrazioni.length === 1
+            ? larghezza / 2
+            : margine.lati + areaLarghezza * i / (registrazioni.length - 1);
+
+        const y = margine.alto +
+            (massimo - r.peso) / intervallo * areaAltezza;
+
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    });
+
+    ctx.stroke();
+
+    registrazioni.forEach(function(r, i) {
+        const x = registrazioni.length === 1
+            ? larghezza / 2
+            : margine.lati + areaLarghezza * i / (registrazioni.length - 1);
+
+        const y = margine.alto +
+            (massimo - r.peso) / intervallo * areaAltezza;
+
+        ctx.fillStyle = "#39ff6a";
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    ctx.fillStyle = "#39ff6a";
+    ctx.fillText(registrazioni[0].data || "", margine.lati, altezza - 10);
+
+    const ultimaData = registrazioni[registrazioni.length - 1].data || "";
+    const larghezzaTesto = ctx.measureText(ultimaData).width;
+    ctx.fillText(
+        ultimaData,
+        Math.max(margine.lati, larghezza - margine.lati - larghezzaTesto),
+        altezza - 10
+    );
+}
+
 function loadCheck() {
     const ultimo = localStorage.getItem("rz_check");
 
@@ -922,6 +1048,8 @@ function loadCheck() {
 
     renderHistory();
 }
+
+renderWeightChart();
 
 
 loadCheck();
