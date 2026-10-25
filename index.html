@@ -2532,8 +2532,12 @@ document.addEventListener("DOMContentLoaded", function() {
       clienteId = cliente.id;
       const lista = leggiAllenamenti();
 
-      lista.push({
-        id: Date.now().toString(),
+
+      const form = document.getElementById("rzAllenamentoForm");
+      const modificaId = form.dataset.modificaId;
+
+      const esercizio = {
+        id: modificaId || Date.now().toString(),
         data: document.getElementById("rzAllData").value,
         nome: document.getElementById("rzAllNome").value.trim(),
         gruppo: document.getElementById("rzAllGruppo").value.trim(),
@@ -2543,10 +2547,25 @@ document.addEventListener("DOMContentLoaded", function() {
         kg: document.getElementById("rzAllKg").value,
         recupero: document.getElementById("rzAllRec").value.trim(),
         note: document.getElementById("rzAllNote").value.trim()
-      });
+      };
+
+      if (modificaId) {
+        const indice = lista.findIndex(x => x.id === modificaId);
+        if (indice !== -1) {
+          lista[indice] = esercizio;
+        } else {
+          lista.push(esercizio);
+        }
+        delete form.dataset.modificaId;
+      } else {
+        lista.push(esercizio);
+      }
+
 
       salvaAllenamenti(lista);
       this.reset();
+        delete this.dataset.modificaId;
+this.querySelector('button[type="submit"]').textContent = "Salva esercizio";
       document.getElementById("rzAllData").value =
         new Date().toISOString().slice(0, 10);
       document.getElementById("rzAllSerie").value = 3;
@@ -2602,6 +2621,32 @@ document.addEventListener("DOMContentLoaded", function() {
         (a.note ? " | Note: " + a.note : "");
       card.appendChild(dettagli);
 
+
+      const modifica = document.createElement("button");
+      modifica.type = "button";
+      modifica.textContent = "Modifica esercizio";
+      modifica.style.cssText =
+        "background:#39ff14;color:#000;padding:8px;border:0;border-radius:6px;cursor:pointer;margin-right:8px;font-weight:bold";
+
+      modifica.addEventListener("click", function() {
+        document.getElementById("rzAllData").value = a.data;
+        document.getElementById("rzAllNome").value = a.nome;
+        document.getElementById("rzAllGruppo").value = a.gruppo || "";
+        document.getElementById("rzAllEsercizio").value = a.esercizio;
+        document.getElementById("rzAllSerie").value = a.serie;
+        document.getElementById("rzAllRip").value = a.ripetizioni;
+        document.getElementById("rzAllKg").value = a.kg;
+        document.getElementById("rzAllRec").value = a.recupero || "";
+        document.getElementById("rzAllNote").value = a.note || "";
+
+        const form = document.getElementById("rzAllenamentoForm");
+        form.dataset.modificaId = a.id;
+        form.querySelector('button[type="submit"]').textContent =
+          "Salva modifiche";
+
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+
       const elimina = document.createElement("button");
       elimina.type = "button";
       elimina.textContent = "Elimina esercizio";
@@ -2614,7 +2659,9 @@ document.addEventListener("DOMContentLoaded", function() {
         aggiornaStorico();
       });
 
+      card.appendChild(modifica);
       card.appendChild(elimina);
+
       storico.appendChild(card);
     });
   }
@@ -2640,6 +2687,7 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 })();
 
+    
     
 </script>
 
