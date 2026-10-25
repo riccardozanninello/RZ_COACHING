@@ -1306,6 +1306,256 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 })();
 
+/* RZ COACHING - GRAFICO PROGRESSIONE CARICHI */
+(function () {
+    const sezione = document.getElementById("workout");
+
+    if (!sezione || document.getElementById("rzLoadCharts")) return;
+
+    const esercizi = [
+        { nome: "Panca piana", indice: 0 },
+        { nome: "Panca inclinata", indice: 1 },
+        { nome: "Push Down", indice: 2 }
+    ];
+
+    const pannello = document.createElement("div");
+    pannello.id = "rzLoadCharts";
+    pannello.className = "progress-box";
+    pannello.style.marginTop = "20px";
+
+    pannello.innerHTML = `
+        <h2 style="color:var(--green)">Progressione carichi</h2>
+        <p class="card-text">
+            Segui l'andamento dei kg utilizzati nel tempo.
+        </p>
+        <div id="rzLoadChartList"></div>
+    `;
+
+    const storico = document.getElementById("rzWorkoutHistory");
+
+    if (storico) {
+        storico.insertAdjacentElement("afterend", pannello);
+    } else {
+        sezione.appendChild(pannello);
+    }
+
+    const NS = "http://www.w3.org/2000/svg";
+
+    function elementoSVG(tipo, attributi, testo) {
+        const el = document.createElementNS(NS, tipo);
+
+        Object.entries(attributi).forEach(([chiave, valore]) => {
+            el.setAttribute(chiave, valore);
+        });
+
+        if (testo !== undefined) el.textContent = testo;
+
+        return el;
+    }
+
+    function leggiDati(indice) {
+        const punti = [];
+
+        for (let i = 0; i < localStorage.length; i++) {
+            const chiave = localStorage.key(i);
+
+            if (!chiave ||
+                !/^rz_workout_\d{4}-\d{2}-\d{2}$/.test(chiave)) {
+                continue;
+            }
+
+            try {
+                const dati = JSON.parse(localStorage.getItem(chiave));
+                const esercizio = dati && dati[indice];
+
+                if (!esercizio || esercizio.peso === "" ||
+                    esercizio.peso === undefined ||
+                    esercizio.peso === null) {
+                    continue;
+                }
+
+                const peso = Number(esercizio.peso);
+
+                if (!Number.isFinite(peso) || peso < 0) continue;
+
+                punti.push({
+                    data: chiave.substring("rz_workout_".length),
+                    peso
+                });
+            } catch (e) {
+                // Ignora le registrazioni non valide.
+            }
+        }
+
+        return punti.sort((a, b) => a.data.localeCompare(b.data));
+    }
+
+    function creaGrafico(contenitore, esercizio, punti) {
+        const card = document.createElement("div");
+        card.className = "list-item";
+        card.style.display = "block";
+        card.style.marginTop = "14px";
+
+        const titolo = document.createElement("h3");
+        titolo.style.color = "var(--green)";
+        titolo.textContent = esercizio.nome;
+        card.appendChild(titolo);
+
+        if (punti.length === 0) {
+            const messaggio = document.createElement("p");
+            messaggio.className = "card-text";
+            messaggio.textContent =
+                "Nessun peso registrato. Inserisci i kg nell'allenamento e salva.";
+            card.appendChild(messaggio);
+            contenitore.appendChild(card);
+            return;
+        }
+
+        const ultimo = punti[punti.length - 1];
+        const massimo = Math.max(...punti.map(p => p.peso));
+        const minimo = Math.min(...punti.map(p => p.peso));
+
+        const riepilogo = document.createElement("p");
+        riepilogo.className = "card-text";
+        riepilogo.textContent =
+            "Ultimo carico: " + ultimo.peso + " kg · " +
+            "Massimo registrato: " + massimo + " kg";
+        card.appendChild(riepilogo);
+
+        if (punti.length < 2) {
+            const nota = document.createElement("p");
+            nota.className = "card-text";
+            nota.textContent =
+                "Registra il peso in un'altra data per vedere la progressione.";
+            card.appendChild(nota);
+        }
+
+        const larghezza = 320;
+        const altezza = 190;
+        const sinistra = 42;
+        const destra = 12;
+        const alto = 16;
+        const basso = 36;
+        const areaW = larghezza - sinistra - destra;
+        const areaH = altezza - alto - basso;
+
+        const pesi = punti.map(p => p.peso);
+        const minimoDati = Math.min(...pesi);
+        const massimoDati = Math.max(...pesi);
+        const margine = massimoDati === minimoDati
+            ? Math.max(2, massimoDati * 0.1)
+            : (massimoDati - minimoDati) * 0.15;
+
+        const scalaMin = Math.max(0, minimoDati - margine);
+        const scalaMax = massimoDati + margine;
+
+        function x(i) {
+            return punti.length === 1
+                ? sinistra + areaW / 2
+                : sinistra + i * areaW / (punti.length - 1);
+        }
+
+        function y(peso) {
+            return alto + areaH -
+                ((peso - scalaMin) / (scalaMax - scalaMin)) * areaH;
+        }
+
+        const svg = elementoSVG("svg", {
+            viewBox: `0 0 ${larghezza} ${altezza}`,
+            width: "100%",
+            role: "img",
+            "aria-label": "Progressione dei carichi per " + esercizio.nome
+        });
+
+        // Griglia e valori dell'asse verticale.
+        for (let i = 0; i <= 3; i++) {
+            const valore = scalaMin + (scalaMax - scalaMin) * i / 3;
+            const yy = y(valore);
+
+            svg.appendChild(elementoSVG("line", {
+                x1: sinistra,
+                y1: yy,
+                x2: larghezza - destra,
+                y2: yy,
+                stroke: "#444",
+                "stroke-width": "1"
+            }));
+
+            svg.appendChild(elementoSVG("text", {
+                x: sinistra - 6,
+                y: yy + 4,
+                fill: "#bbb",
+                "font-size": "10",
+                "text-anchor": "end"
+            }, valore.toFixed(1)));
+        }
+
+        // Linea della progressione.
+        const percorso = punti.map((p, i) =>
+            (i === 0 ? "M" : "L") + x(i) + " " + y(p.peso)
+        ).join(" ");
+
+        svg.appendChild(elementoSVG("path", {
+            d: percorso,
+            fill: "none",
+            stroke: "#39ff14",
+            "stroke-width": "3",
+            "stroke-linejoin": "round",
+            "stroke-linecap": "round"
+        }));
+
+        // Punti e date.
+        punti.forEach((p, i) => {
+            svg.appendChild(elementoSVG("circle", {
+                cx: x(i),
+                cy: y(p.peso),
+                r: "4",
+                fill: "#39ff14"
+            }));
+
+            if (punti.length <= 6 ||
+                i === 0 ||
+                i === punti.length - 1) {
+                const dataBreve = p.data.slice(5).replace("-", "/");
+
+                svg.appendChild(elementoSVG("text", {
+                    x: x(i),
+                    y: altezza - 12,
+                    fill: "#bbb",
+                    "font-size": "10",
+                    "text-anchor": "middle"
+                }, dataBreve));
+            }
+        });
+
+        card.appendChild(svg);
+        contenitore.appendChild(card);
+    }
+
+    function aggiornaGrafici() {
+        const contenitore = document.getElementById("rzLoadChartList");
+        contenitore.innerHTML = "";
+
+        esercizi.forEach(esercizio => {
+            creaGrafico(
+                contenitore,
+                esercizio,
+                leggiDati(esercizio.indice)
+            );
+        });
+    }
+
+    aggiornaGrafici();
+
+    const pulsanteSalva = document.getElementById("rzWorkoutSave");
+
+    if (pulsanteSalva) {
+        pulsanteSalva.addEventListener("click", function () {
+            setTimeout(aggiornaGrafici, 100);
+        });
+    }
+})();
+
 </script>
 
 </body>
