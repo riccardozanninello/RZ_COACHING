@@ -2405,6 +2405,242 @@ document.addEventListener("DOMContentLoaded", function() {
 })();
 
     
+/* RZ COACHING - SCHEDE ALLENAMENTO CLIENTI */
+(function () {
+  const STORAGE = "rz_allenamenti_cliente_v1_";
+  let clienteId = null;
+
+  function trovaCliente() {
+    const dati = document.getElementById("rzSchedaDati");
+    if (!dati) return null;
+
+    const testo = dati.innerText || "";
+    const match = testo.match(/Nome:\s*(.+)/i);
+    if (!match) return null;
+
+    const nome = match[1].trim();
+    const clienti = JSON.parse(
+      localStorage.getItem("rz_coaching_clienti_v1") || "[]"
+    );
+
+    return clienti.find(c => c.nome === nome) || null;
+  }
+
+  function leggiAllenamenti() {
+    if (!clienteId) return [];
+    try {
+      return JSON.parse(
+        localStorage.getItem(STORAGE + encodeURIComponent(clienteId)) || "[]"
+      );
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function salvaAllenamenti(lista) {
+    localStorage.setItem(
+      STORAGE + encodeURIComponent(clienteId),
+      JSON.stringify(lista)
+    );
+  }
+
+  function creaInterfaccia() {
+    if (document.getElementById("rzAllenamentiPanel")) return;
+
+    const contenitore = document.getElementById("rzSchedaCliente");
+    if (!contenitore) return;
+
+    const panel = document.createElement("div");
+    panel.id = "rzAllenamentiPanel";
+    panel.style.cssText =
+      "margin-top:20px;padding:18px;border:1px solid #39ff14;" +
+      "border-radius:12px;background:#080808;color:#39ff14;";
+
+    panel.innerHTML = `
+      <h2 style="color:#39ff14">🏋️ Schede Allenamento</h2>
+      <p id="rzAllenamentoCliente">Seleziona un cliente.</p>
+
+      <form id="rzAllenamentoForm">
+        <label>Data allenamento</label>
+        <input id="rzAllData" type="date" required
+          style="display:block;width:100%;margin:6px 0 12px;padding:10px;box-sizing:border-box">
+
+        <label>Nome scheda / giornata</label>
+        <input id="rzAllNome" placeholder="Es. Giorno A - Petto e tricipiti" required
+          style="display:block;width:100%;margin:6px 0 12px;padding:10px;box-sizing:border-box">
+
+        <label>Gruppo muscolare</label>
+        <input id="rzAllGruppo" placeholder="Es. Petto"
+          style="display:block;width:100%;margin:6px 0 12px;padding:10px;box-sizing:border-box">
+
+        <label>Esercizio</label>
+        <input id="rzAllEsercizio" placeholder="Es. Panca piana" required
+          style="display:block;width:100%;margin:6px 0 12px;padding:10px;box-sizing:border-box">
+
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+          <div>
+            <label>Serie</label>
+            <input id="rzAllSerie" type="number" min="1" value="3" required
+              style="width:100%;padding:10px;box-sizing:border-box">
+          </div>
+          <div>
+            <label>Ripetizioni</label>
+            <input id="rzAllRip" placeholder="Es. 8-10" required
+              style="width:100%;padding:10px;box-sizing:border-box">
+          </div>
+          <div>
+            <label>Carico (kg)</label>
+            <input id="rzAllKg" type="number" min="0" step="0.5" value="0"
+              style="width:100%;padding:10px;box-sizing:border-box">
+          </div>
+          <div>
+            <label>Recupero</label>
+            <input id="rzAllRec" placeholder="Es. 90 sec"
+              style="width:100%;padding:10px;box-sizing:border-box">
+          </div>
+        </div>
+
+        <label style="display:block;margin-top:12px">Note</label>
+        <textarea id="rzAllNote" rows="2" placeholder="Tecnica, indicazioni..."
+          style="display:block;width:100%;margin:6px 0 12px;padding:10px;box-sizing:border-box"></textarea>
+
+        <button type="submit"
+          style="background:#39ff14;color:#000;padding:12px;border:0;border-radius:8px;font-weight:bold;cursor:pointer">
+          Salva esercizio
+        </button>
+      </form>
+
+      <hr style="border-color:#39ff14;margin:20px 0">
+      <h3>Storico allenamenti</h3>
+      <div id="rzAllenamentoStorico"></div>
+    `;
+
+    contenitore.appendChild(panel);
+
+    document.getElementById("rzAllData").value =
+      new Date().toISOString().slice(0, 10);
+
+    document.getElementById("rzAllenamentoForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+
+      const cliente = trovaCliente();
+      if (!cliente) {
+        alert("Seleziona prima un cliente dalla scheda clienti.");
+        return;
+      }
+
+      clienteId = cliente.id;
+      const lista = leggiAllenamenti();
+
+      lista.push({
+        id: Date.now().toString(),
+        data: document.getElementById("rzAllData").value,
+        nome: document.getElementById("rzAllNome").value.trim(),
+        gruppo: document.getElementById("rzAllGruppo").value.trim(),
+        esercizio: document.getElementById("rzAllEsercizio").value.trim(),
+        serie: document.getElementById("rzAllSerie").value,
+        ripetizioni: document.getElementById("rzAllRip").value.trim(),
+        kg: document.getElementById("rzAllKg").value,
+        recupero: document.getElementById("rzAllRec").value.trim(),
+        note: document.getElementById("rzAllNote").value.trim()
+      });
+
+      salvaAllenamenti(lista);
+      this.reset();
+      document.getElementById("rzAllData").value =
+        new Date().toISOString().slice(0, 10);
+      document.getElementById("rzAllSerie").value = 3;
+      document.getElementById("rzAllKg").value = 0;
+      aggiornaStorico();
+      alert("Esercizio salvato!");
+    });
+  }
+
+  function aggiornaStorico() {
+    const storico = document.getElementById("rzAllenamentoStorico");
+    if (!storico) return;
+
+    const cliente = trovaCliente();
+    if (!cliente) {
+      clienteId = null;
+      document.getElementById("rzAllenamentoCliente").textContent =
+        "Apri la scheda di un cliente per gestire i suoi allenamenti.";
+      storico.innerHTML = "";
+      return;
+    }
+
+    clienteId = cliente.id;
+    document.getElementById("rzAllenamentoCliente").textContent =
+      "Cliente: " + cliente.nome;
+
+    const lista = leggiAllenamenti().sort((a, b) =>
+      b.data.localeCompare(a.data)
+    );
+
+    if (!lista.length) {
+      storico.innerHTML = "<p>Nessun allenamento salvato per questo cliente.</p>";
+      return;
+    }
+
+    storico.innerHTML = "";
+    lista.forEach(a => {
+      const card = document.createElement("div");
+      card.style.cssText =
+        "border:1px solid #39ff14;border-radius:8px;padding:12px;margin:10px 0";
+
+      const titolo = document.createElement("strong");
+      titolo.textContent = a.data + " — " + a.nome;
+      card.appendChild(titolo);
+
+      const dettagli = document.createElement("p");
+      dettagli.textContent =
+        (a.gruppo ? a.gruppo + " | " : "") + a.esercizio +
+        " | Serie: " + a.serie +
+        " | Rip.: " + a.ripetizioni +
+        " | Kg: " + a.kg +
+        (a.recupero ? " | Recupero: " + a.recupero : "") +
+        (a.note ? " | Note: " + a.note : "");
+      card.appendChild(dettagli);
+
+      const elimina = document.createElement("button");
+      elimina.type = "button";
+      elimina.textContent = "Elimina esercizio";
+      elimina.style.cssText =
+        "background:#222;color:#39ff14;padding:8px;border:1px solid #39ff14;border-radius:6px;cursor:pointer";
+
+      elimina.addEventListener("click", function() {
+        if (!confirm("Vuoi eliminare questo esercizio dallo storico?")) return;
+        salvaAllenamenti(leggiAllenamenti().filter(x => x.id !== a.id));
+        aggiornaStorico();
+      });
+
+      card.appendChild(elimina);
+      storico.appendChild(card);
+    });
+  }
+
+  function inizializza() {
+    creaInterfaccia();
+    aggiornaStorico();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", inizializza);
+  } else {
+    inizializza();
+  }
+
+  const dati = document.getElementById("rzSchedaDati");
+  if (dati) {
+    new MutationObserver(aggiornaStorico).observe(dati, {
+      childList: true,
+      subtree: true,
+      characterData: true
+    });
+  }
+})();
+
+    
 </script>
 
 </body>
